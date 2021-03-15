@@ -1,53 +1,46 @@
 import random
+import numpy as np
+from matplotlib import pyplot as plt
 
-people_states = []
+# people_states = []
+
+# S E I R V D
 
 
 class CovidModel:
-    def __init__(self, number_people, people_states):
+    def __init__(self, number_people, days, beta, omega, fi, gamma, alpha, sigma, delta):
         self.number_people = number_people
-        self.people_states = people_states if len(people_states) != 0 else self.set_up_states()
-        self.percent_vaccined = 1 / 700
+        self.days = days
+
         self.prob_connect = 20 / self.number_people
 
-        self.set_up()
+        self.beta = beta
+        self.omega = omega
+        self.fi = fi
+        self.gamma = gamma
+        self.alpha = alpha
+        self.sigma = sigma
+        self.delta = delta
 
-    def __copy__(self):
-        new_model = CovidModel(self.number_people, self.people_states)
-        return new_model
+        self.number_of_people_each_state = np.zeros((days, 6))
 
-    def set_up(self):
-        self.days_of_infection = [0 for _ in range(self.number_people)]
-
-        infected_per_day = 6300
-        dead_per_day = 220
-        all_infected = 212000
-
-        self.probability_get_infected = infected_per_day / all_infected
-        self.probability_get_dead = dead_per_day / all_infected
+        self.set_up_states()
 
     def set_up_states(self):
-        # статистика по Україні на 1 млн осіб
-        all = 31829
-        infected_prob = all / 1000000
-
-        people_states = []
-
-        # визначаю хто який стан матиме на початок моделі
-        for x in range(self.number_people):
-            x = random.random()
-            if x <= infected_prob:
-                people_states.append('i')
-            else:
-                people_states.append('s')
-
-        return people_states
+        number_infected = int(0.01 * self.number_people)
+        self.people_states = ['s' for _ in range(self.number_people-number_infected)]
+        self.people_states.extend(['i' for _ in range(number_infected)])
 
     def build_matrix(self):
         # будується матриця з звязками
         self.matrix = [[0 for _ in range(self.number_people)] for _ in range(self.number_people)]
 
         for i in range(self.number_people):
+            # всі зі всіма
+
+            # self.matrix[i] = [1 for _ in range(self.number_people)]
+            # self.matrix[i][i] = 0
+
             for x in range(i):
                 self.matrix[i][x] = self.matrix[x][i]
 
@@ -63,109 +56,118 @@ class CovidModel:
 
     def get_states(self):
 
-        sum_infected = 0
-        sum_recovered = 0
-        sum_susceptible = 0
-        sum_dead = 0
-        sum_vaccined = 0
+        sum_s = 0
+        sum_e = 0
+        sum_i = 0
+        sum_r = 0
+        sum_v = 0
+        sum_d = 0
 
         for i in range(self.number_people):
-            if self.people_states[i] == 'i' or self.people_states[i] == 'is':
-                sum_infected += 1
+            if self.people_states[i] == 's':
+                sum_s += 1
+            elif self.people_states[i] == 'e':
+                sum_e += 1
+            elif self.people_states[i] == 'i':
+                sum_i += 1
             elif self.people_states[i] == 'r':
-                sum_recovered += 1
-            elif self.people_states[i] == 's':
-                sum_susceptible += 1
+                sum_r += 1
             elif self.people_states[i] == 'v':
-                sum_vaccined += 1
-            else:
-                sum_dead += 1
+                sum_v += 1
+            elif self.people_states[i] == 'd':
+                sum_d += 1
 
-        print("Infected:", sum_infected)
-        print("Dead:", sum_dead)
-        print("Susceptible:", sum_susceptible)
-        print("Recovered:", sum_recovered)
-        print("Vaccinated:", sum_vaccined)
+        return np.asarray([sum_s, sum_e, sum_i, sum_r, sum_v, sum_d])
 
-    def covid_model(self, numb_of_days, if_vaccine):
+    def covid_model(self, numb_of_days):
+
         for day in range(numb_of_days):
-            # print_matrix(matrix)
-            if day % (numb_of_days - 1) == 0:
-                # print("Day ", day)
-                self.get_states()
-                print(if_vaccine)
-                print("\n")
 
             if day % 10 == 0:
                 # змінює звязки кожні 10 днів
+                # print(self.people_states)
+                # print("\n")
                 self.build_matrix()
 
-            vaccined_people = 0
-            needed_vaccined_people = self.percent_vaccined * self.number_people
-
+            temporary_states = self.people_states.copy()
 
             for person in range(self.number_people):
 
-                if if_vaccine and vaccined_people < needed_vaccined_people:
-                    if self.people_states[person] != 'v':
-                        self.people_states[person] = 'v'
-                        vaccined_people += 1
-
                 if self.people_states[person] == 's':
-                    for indx, numb in enumerate(self.matrix[person]):
-                        if numb and (self.people_states[indx] == 'i'):
-                            # здорова людина контактує з хворим
-                            random_numb = random.random()
-                            if random_numb < self.probability_get_infected:
-                                if random_numb < 0.5:
-                                    # людина йде на ізоляцію
-                                    self.people_states[person] = 'is'
-                                else:
-                                    self.people_states[person] = 'i'
-                                break
-
-                elif self.people_states[person] == 'i' or self.people_states[person] == 'is':
-                    if self.days_of_infection[person] == 21:
-                        # хвора людина видужує та отримує імунітет
-                        self.people_states[person] = 'r'
-                        self.days_of_infection[person] = 0
+                    random_numb = random.random()
+                    if random_numb < self.omega:
+                        temporary_states[person] = 'v'
                     else:
-                        random_numb = random.random()
-                        if random_numb < self.probability_get_dead:
-                            # хвора людина помирає
-                            self.people_states[person] = 'd'
-                            # clear_connections(matrix, person)
-                        else:
-                            self.days_of_infection[person] += 1
+                        for indx, numb in enumerate(self.matrix[person]):
+                            if numb and (self.people_states[indx] == 'e' or self.people_states[indx] == 'i'):
+                                # здорова людина контактує з хворим
+                                if random_numb < self.beta:
+                                    temporary_states[person] = 'e'
+                                    break
+
+                elif self.people_states[person] == 'e':
+                    random_numb = random.random()
+                    if random_numb < self.alpha:
+                        temporary_states[person] = 'i'
+                    elif (self.alpha <= random_numb) and (random_numb <= self.alpha + self.gamma):
+                        self.people_states[person] = 'v'
+
+                elif self.people_states[person] == 'i':
+                    random_numb = random.random()
+                    if random_numb < self.sigma:
+                        temporary_states[person] = 'r'
+                    elif (self.sigma <= random_numb) and (random_numb <= self.sigma + self.gamma):
+                        temporary_states[person] = 'v'
 
                 elif self.people_states[person] == 'r':
-                    if self.days_of_infection[person] == 120:
-                        # в людини закінчується імунітет
-                        self.people_states[person] = 's'
-                    else:
-                        self.days_of_infection[person] += 1
+                    random_numb = random.random()
+                    if random_numb < self.delta:
+                        temporary_states[person] = 'd'
+                    elif (self.delta <= random_numb) and (random_numb <= self.delta + self.gamma):
+                        temporary_states[person] = 'v'
 
-    def run_simulation(self, numb_of_days, start_vaccine):
+                elif self.people_states[person] == 'v':
+                    random_numb = random.random()
+                    if random_numb < self.fi:
+                        temporary_states[person] = 's'
+
+            self.number_of_people_each_state[day] = self.get_states()
+            self.people_states = temporary_states
+
+    def run_simulation(self):
         self.build_matrix()
+        self.covid_model(self.days)
 
-        if start_vaccine != -1:
-            self.covid_model(start_vaccine, False)
-            self.covid_model(numb_of_days-start_vaccine, True)
-        else:
-            self.covid_model(numb_of_days, False)
+    def plot(self):
+        self.run_simulation()
+
+        time_steps = np.linspace(0, self.days, 60)
+        t = np.asarray(time_steps)
+        u = np.asarray(self.number_of_people_each_state)
+
+        plt.plot(t, u[:, 0], label="S")
+        plt.plot(t, u[:, 1], label="E")
+        plt.plot(t, u[:, 2], label="I")
+        plt.plot(t, u[:, 3], label="R")
+        plt.plot(t, u[:, 4], label="V")
+        plt.plot(t, u[:, 5], label="D")
+
+        plt.legend()
+        plt.show()
 
 
 if __name__ == '__main__':
 
-    model = CovidModel(2000, [])
-    model_copy = model.__copy__()
+    fi = 1 / 120  # from V to S
+    gamma = 1 / 14  # from EIR to V
+    alpha = 0.2  # from E to I
+    sigma = alpha  # from I to R
+    omega = 0.008  # from S to V
+    delta = 1 / 50  # from R to D
 
-    print("WITHOUT VACCINE")
-    model_copy.run_simulation(50, -1)
+    number_people = 1000
+    days = 60
+    beta = 0.05  # from S to E == contact rate
 
-    start = 40
-    while start >= 0:
-        print("WITHOUT VACCINE:", start, "WITH VACCINE:", 50-start, "\n")
-        model_copy = model.__copy__()
-        model_copy.run_simulation(50, start)
-        start -= 10
+    model = CovidModel(number_people, days, beta, omega, fi, gamma, alpha, sigma, delta)
+    model.plot()
