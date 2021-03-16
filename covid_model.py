@@ -12,7 +12,7 @@ class CovidModel:
         self.number_people = number_people
         self.days = days
 
-        self.prob_connect = 20 / self.number_people
+        # self.prob_connect = 1
 
         self.beta = beta
         self.omega = omega
@@ -27,7 +27,7 @@ class CovidModel:
         self.set_up_states()
 
     def set_up_states(self):
-        number_infected = int(0.01 * self.number_people)
+        number_infected = 10
         self.people_states = ['s' for _ in range(self.number_people-number_infected)]
         self.people_states.extend(['i' for _ in range(number_infected)])
 
@@ -38,16 +38,16 @@ class CovidModel:
         for i in range(self.number_people):
             # всі зі всіма
 
-            # self.matrix[i] = [1 for _ in range(self.number_people)]
-            # self.matrix[i][i] = 0
+            self.matrix[i] = [1 for _ in range(self.number_people)]
+            self.matrix[i][i] = 0
 
-            for x in range(i):
-                self.matrix[i][x] = self.matrix[x][i]
-
-            for j in range(i + 1, self.number_people):
-                random_numb = random.random()
-                if random_numb < self.prob_connect:
-                    self.matrix[i][j] = 1
+            # for x in range(i):
+            #     self.matrix[i][x] = self.matrix[x][i]
+            #
+            # for j in range(i + 1, self.number_people):
+            #     random_numb = random.random()
+            #     if random_numb < self.prob_connect:
+            #         self.matrix[i][j] = 1
 
     def print_matrix(self):
         for m in self.matrix:
@@ -95,15 +95,20 @@ class CovidModel:
 
                 if self.people_states[person] == 's':
                     random_numb = random.random()
-                    if random_numb < self.omega:
+                    infected = 0
+                    a = 0
+                    for ind in range(self.number_people):
+                        if (self.people_states[ind] == 'e') or (self.people_states[ind] == 'i'):
+                            # здорова людина контактує з хворим
+                            infected += 1
+                        else:
+                            a += 1
+                    beta = self.beta * (infected/(a+infected))
+                    if random_numb < beta:
+                        temporary_states[person] = 'e'
+                        break
+                    if (random_numb > beta) and (random_numb < self.omega):
                         temporary_states[person] = 'v'
-                    else:
-                        for indx, numb in enumerate(self.matrix[person]):
-                            if numb and (self.people_states[indx] == 'e' or self.people_states[indx] == 'i'):
-                                # здорова людина контактує з хворим
-                                if random_numb < self.beta:
-                                    temporary_states[person] = 'e'
-                                    break
 
                 elif self.people_states[person] == 'e':
                     random_numb = random.random()
@@ -141,7 +146,7 @@ class CovidModel:
     def plot(self):
         self.run_simulation()
 
-        time_steps = np.linspace(0, self.days, 60)
+        time_steps = np.linspace(0, self.days, self.days)
         t = np.asarray(time_steps)
         u = np.asarray(self.number_of_people_each_state)
 
@@ -165,9 +170,9 @@ if __name__ == '__main__':
     omega = 0.008  # from S to V
     delta = 1 / 50  # from R to D
 
-    number_people = 1000
-    days = 60
-    beta = 0.05  # from S to E == contact rate
+    number_people = 100
+    days = 200
+    beta = 0.3  # from S to E == contact rate
 
     model = CovidModel(number_people, days, beta, omega, fi, gamma, alpha, sigma, delta)
     model.plot()

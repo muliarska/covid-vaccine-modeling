@@ -77,14 +77,14 @@ if __name__ == "__main__":
 
     fi = 1/120 # from V to S
     gamma = 1/14 # from EIR to V
-    beta = 0.01 # from S to E
+    beta = 0.3 # from S to E
     alpha = 0.2 # from E to I
     sigma = alpha # from I to R
     omega = 0.008 # from S to V
     delta = 1/50 # from R to D
 
-    S0 = 990
-    E0 = 10
+    S0 = 0.9
+    E0 = 0.1
     I0 = 0
     R0 = 0
     V0 = 0
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     solver = ForwardEuler(sir)
     solver.set_initial_conditions(sir.initial_conditions)
 
-    time_steps = np.linspace(0, 60, 1001)
+    time_steps = np.linspace(0, 60, 60)
 
     u, t = solver.solve(time_steps)
 
