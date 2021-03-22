@@ -11,12 +11,12 @@ D' = delta*R
 """
 
 import numpy as np
-from diff_equation.ODESolver.ODESolver import ForwardEuler
+from ODESolver import ForwardEuler
 from matplotlib import pyplot as plt
 
 
 class SEIRVS:
-    def __init__(self, beta, omega, fi, gamma, alpha, sigma, delta, S0, E0, I0, R0, V0, D0):
+    def __init__(self, beta, omega, fi, gamma, alpha, sigma, delta, S0, E0, I0, R0, V0, D0, M0):
         """
 
         """
@@ -57,19 +57,20 @@ class SEIRVS:
         elif callable(delta):
             self.delta = delta
 
-        self.initial_conditions = [S0, E0, I0, R0, V0, D0]
+        self.initial_conditions = [S0, E0, I0, R0, V0, D0, M0]
 
     def __call__(self, u, t):
 
-        S, E, I, R, V, D = u
+        S, E, I, R, V, D, M = u
 
         return np.asarray([
-            -self.beta(t)*(E + I)*S - self.omega(t)*S + self.fi(t)*V,
+            -self.beta(t)*(E + I)*S - self.omega(t)*S + self.fi(t)*M,
             self.beta(t)*(E + I)*S - (self.gamma(t) + self.alpha(t))*E,
             self.alpha(t)*E - (self.gamma(t) + self.sigma(t))*I,
              self.sigma(t)*I - self.gamma(t)*R - self.delta(t)*R,
-            self.gamma(t)*(E + I + R) + self.omega(t)*S - self.fi(t)*V,
-            self.delta(t) * R
+            self.gamma(t)*(E + I + R) + self.omega(t)*S,
+            self.delta(t) * R,
+            self.gamma(t) * (E+I+R) - self.fi(t) * M
         ])
 
 
@@ -89,8 +90,9 @@ if __name__ == "__main__":
     R0 = 0
     V0 = 0
     D0 = 0
+    M0 = 0
 
-    sir = SEIRVS(beta, omega, fi, gamma, alpha, sigma, delta, S0, E0, I0, R0, V0, D0)
+    sir = SEIRVS(beta, omega, fi, gamma, alpha, sigma, delta, S0, E0, I0, R0, V0, D0, M0)
     solver = ForwardEuler(sir)
     solver.set_initial_conditions(sir.initial_conditions)
 
@@ -98,9 +100,9 @@ if __name__ == "__main__":
 
     u, t = solver.solve(time_steps)
 
-    for x in u:
-        print(x)
-    print(t)
+    # for x in u:
+    #     print(x)
+    # print(t)
 
     plt.plot(t, u[:, 0], label="S")
     plt.plot(t, u[:, 1], label="E")
@@ -108,5 +110,6 @@ if __name__ == "__main__":
     plt.plot(t, u[:, 3], label="R")
     plt.plot(t, u[:, 4], label="V")
     plt.plot(t, u[:, 5], label="D")
+    plt.plot(t, u[:, 6], label="M")
     plt.legend()
     plt.show()
