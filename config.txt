@@ -1,0 +1,8 @@
+fi = 1/120  # from M to S
+gamma = 1/21  # from EIR to M
+alpha = 0.2  # from E to I
+beta = 0.3  # from S to E == contact rate
+sigma = 0.2  # from I to R, sigma = alpha
+omega = 0.008*0.9  # from S to V, кількість вакцинованих за день * якість вакцини  
+delta = 1/50  # from R to D
+theta = 1/180  # from V to S, тривалість дії вакцини

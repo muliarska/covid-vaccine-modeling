@@ -4,11 +4,21 @@ from matplotlib import pyplot as plt
 
 # people_states = []
 
-# S E I R V D
+# S E I R V D M
+'''
+S' = -beta*(E + I)*S + fi*M - omega*S + theta*V
+E' = beta*(E + I)*S - (gamma + alpha)E
+I' = alpha*E - (gamma + sigma)I
+R' = sigma*I - gamma*R - delta*R
+V' = omega*S - theta*V
+D' = delta*R
+M' = gamma*(E + I + R) - fi*M
+M = імунний
+'''
 
 
 class CovidModel:
-    def __init__(self, number_people, days, beta, omega, fi, gamma, alpha, sigma, delta):
+    def __init__(self, number_people, days, beta, omega, fi, gamma, alpha, sigma, delta, theta):
         self.number_people = number_people
         self.days = days
 
@@ -21,6 +31,7 @@ class CovidModel:
         self.alpha = alpha
         self.sigma = sigma
         self.delta = delta
+        self.theta = theta
 
         self.number_of_people_each_state = np.zeros((days, 7))
 
@@ -80,7 +91,14 @@ class CovidModel:
             elif self.people_states[i] == 'm':
                 sum_m += 1
 
-        return np.asarray([sum_s, sum_e, sum_i, sum_r, sum_v, sum_d, sum_m])
+        return np.asarray([sum_s/self.number_people, sum_e/self.number_people,
+                           sum_i/self.number_people, sum_r/self.number_people,
+                           sum_v/self.number_people, sum_d/self.number_people,
+                           sum_m/self.number_people])
+        # return np.asarray([sum_s, sum_e,
+        #                    sum_i, sum_r,
+        #                    sum_v, sum_d,
+        #                    sum_m])
 
     def covid_model(self, numb_of_days):
 
@@ -99,14 +117,14 @@ class CovidModel:
                 if self.people_states[person] == 's':
                     random_numb = random.random()
                     infected = 0
-                    a = 0
+                    not_infected = 0
                     for ind in range(self.number_people):
                         if (self.people_states[ind] == 'e') or (self.people_states[ind] == 'i'):
                             # здорова людина контактує з хворим
                             infected += 1
                         else:
-                            a += 1
-                    beta = self.beta * (infected/(a+infected))
+                            not_infected += 1
+                    beta = self.beta * (infected/(not_infected+infected))
                     if random_numb < beta:
                         temporary_states[person] = 'e'
                         break
@@ -134,16 +152,15 @@ class CovidModel:
                     elif (self.delta <= random_numb) and (random_numb <= self.delta + self.gamma):
                         temporary_states[person] = 'm'
 
-                # elif self.people_states[person] == 'v':
-                #     random_numb = random.random()
-                #     if random_numb < self.fi:
-                #         temporary_states[person] = 's'
+                elif self.people_states[person] == 'v':
+                    random_numb = random.random()
+                    if random_numb < self.theta:
+                        temporary_states[person] = 's'
 
                 elif self.people_states[person] == 'm':
                     random_numb = random.random()
                     if random_numb < self.fi:
                         temporary_states[person] = 's'
-
 
 
             self.number_of_people_each_state[day] = self.get_states()
@@ -168,8 +185,9 @@ class CovidModel:
         plt.plot(t, u[:, 5], label="D")
         plt.plot(t, u[:, 6], label="M")
 
-        plt.legend()
-        plt.show()
+    
+
+        return plt
 
 
 if __name__ == '__main__':
@@ -179,12 +197,13 @@ if __name__ == '__main__':
     alpha = 0.2  # from E to I
     beta = 0.3  # from S to E == contact rate
     sigma = alpha  # from I to R
-    omega = 0.008  # from S to V
+    omega = 0.008 * 0.9  # from S to V, кількість вакцинованих за день * якість вакцини  
     delta = 1 / 50  # from R to D
+    theta = 1/365  # from V to S, тривалість дії вакцини
 
     number_people = 1000
-    days = 250
+    days = 1000
     
 
-    model = CovidModel(number_people, days, beta, omega, fi, gamma, alpha, sigma, delta)
+    model = CovidModel(number_people, days, beta, omega, fi, gamma, alpha, sigma, delta, theta)
     model.plot()

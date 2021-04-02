@@ -1,14 +1,13 @@
-"""
-SEIRVS disease model
-
-S' = -beta*(E + I)*S - w*S + fi*V
-S = 540 E = 450 V = 1 I = 1
+'''
+S' = -beta*(E + I)*S + fi*M - omega*S + theta*V
 E' = beta*(E + I)*S - (gamma + alpha)E
 I' = alpha*E - (gamma + sigma)I
 R' = sigma*I - gamma*R - delta*R
-V' = gamma*(E + I + R) + w*S - fi*V
+V' = omega*S - theta*V
 D' = delta*R
-"""
+M' = gamma*(E + I + R) - fi*M
+M = імунний
+'''
 
 import numpy as np
 from ODESolver import ForwardEuler
@@ -16,9 +15,8 @@ from matplotlib import pyplot as plt
 
 
 class SEIRVS:
-    def __init__(self, beta, omega, fi, gamma, alpha, sigma, delta, S0, E0, I0, R0, V0, D0, M0):
+    def __init__(self, beta, omega, fi, gamma, alpha, sigma, delta, theta, S0, E0, I0, R0, V0, D0, M0):
         """
-
         """
 
         if isinstance(omega, (float, int)):
@@ -57,6 +55,11 @@ class SEIRVS:
         elif callable(delta):
             self.delta = delta
 
+        if isinstance(theta, (float, int)):
+            self.theta = lambda t: theta
+        elif callable(delta):
+            self.theta = theta
+
         self.initial_conditions = [S0, E0, I0, R0, V0, D0, M0]
 
     def __call__(self, u, t):
@@ -64,11 +67,11 @@ class SEIRVS:
         S, E, I, R, V, D, M = u
 
         return np.asarray([
-            -self.beta(t)*(E + I)*S - self.omega(t)*S + self.fi(t)*M,
+            -self.beta(t)*(E + I)*S - self.omega(t)*S + self.fi(t)*M + self.theta(t) * V,
             self.beta(t)*(E + I)*S - (self.gamma(t) + self.alpha(t))*E,
             self.alpha(t)*E - (self.gamma(t) + self.sigma(t))*I,
              self.sigma(t)*I - self.gamma(t)*R - self.delta(t)*R,
-            self.gamma(t)*(E + I + R) + self.omega(t)*S,
+            self.gamma(t)*(E + I + R) + self.omega(t)*S - self.theta(t) * V,
             self.delta(t) * R,
             self.gamma(t) * (E+I+R) - self.fi(t) * M
         ])
@@ -76,13 +79,15 @@ class SEIRVS:
 
 if __name__ == "__main__":
 
-    fi = 1/120 # from V to S
-    gamma = 1/14 # from EIR to V
-    beta = 0.3 # from S to E
-    alpha = 0.2 # from E to I
-    sigma = alpha # from I to R
-    omega = 0.008 # from S to V
-    delta = 1/50 # from R to D
+    fi = 1 / 120  # from M to S
+    gamma = 1 / 14  # from EIR to M
+    alpha = 0.2  # from E to I
+    beta = 0.3  # from S to E == contact rate
+    sigma = alpha  # from I to R
+    omega = 0.008 * 0.9  # from S to V, кількість вакцинованих за день * якість вакцини  
+    delta = 1 / 50  # from R to D
+    theta = 1/365  # from V to S, тривалість дії вакцини
+
 
     S0 = 0.9
     E0 = 0.1
@@ -92,7 +97,7 @@ if __name__ == "__main__":
     D0 = 0
     M0 = 0
 
-    sir = SEIRVS(beta, omega, fi, gamma, alpha, sigma, delta, S0, E0, I0, R0, V0, D0, M0)
+    sir = SEIRVS(beta, omega, fi, gamma, alpha, sigma, delta, theta, S0, E0, I0, R0, V0, D0, M0)
     solver = ForwardEuler(sir)
     solver.set_initial_conditions(sir.initial_conditions)
 
