@@ -10,7 +10,6 @@ M = імунний
 '''
 
 import numpy as np
-from ODESolver import ForwardEuler
 from matplotlib import pyplot as plt
 
 
@@ -62,19 +61,49 @@ class SEIRVS:
 
         self.initial_conditions = [S0, E0, I0, R0, V0, D0, M0]
 
-    def __call__(self, u, t):
+    def solve_one_time_point(self, pure_variables, t):
 
-        S, E, I, R, V, D, M = u
+        S, E, I, R, V, D, M = pure_variables
 
-        return np.asarray([
-            -self.beta(t)*(E + I)*S - self.omega(t)*S + self.fi(t)*M + self.theta(t) * V,
-            self.beta(t)*(E + I)*S - (self.gamma(t) + self.alpha(t))*E,
-            self.alpha(t)*E - (self.gamma(t) + self.sigma(t))*I,
-             self.sigma(t)*I - self.gamma(t)*R - self.delta(t)*R,
-            self.gamma(t)*(E + I + R) + self.omega(t)*S - self.theta(t) * V,
-            self.delta(t) * R,
-            self.gamma(t) * (E+I+R) - self.fi(t) * M
-        ])
+        S_1 = -self.beta(t)*(E + I)*S - self.omega(t)*S + self.fi(t)*M + self.theta(t) * V
+        E_1 = self.beta(t)*(E + I)*S - (self.gamma(t) + self.alpha(t))*E
+        I_1 = self.alpha(t)*E - (self.gamma(t) + self.sigma(t))*I
+        R_1 = self.sigma(t)*I - self.gamma(t)*R - self.delta(t)*R
+        V_1 = self.omega(t)*S - self.theta(t) * V
+        D_1 = self.delta(t) * R
+        M_1 = self.gamma(t) * (E + I + R) - self.fi(t) * M
+
+        first_derivative = [S_1, E_1, I_1, R_1, V_1, D_1, M_1]
+
+        S_2 = -self.beta(t) * (E_1 * S + S_1 * E + I_1 * S + S_1 * I) - self.omega(t) * S_1\
+              + self.fi(t) * M_1 + self.theta(t) * V_1
+        E_2 = self.beta(t) * (E_1 * S + S_1 * E + I_1 * S + S_1 * I) - \
+              (self.gamma(t) + self.alpha(t)) * E_1
+        I_2 = self.alpha(t) * E_1 - (self.gamma(t) + self.sigma(t)) * I_1
+        R_2 = self.sigma(t) * I_1 - self.gamma(t) * R_1 - self.delta(t) * R_1
+        V_2 = self.gamma(t) * (E_1 + I_1 + R_1) + self.omega(t) * S_1 - self.theta(t) * V_1
+        D_2 = self.delta(t) * R_1
+        M_2 = self.gamma(t) * (E_1 + I_1 + R_1) - self.fi(t) * M_1
+
+        second_derivative = [S_2, E_2, I_2, R_2, V_2, D_2, M_2]
+
+        result = []
+        for i in range(7):
+            result.append(pure_variables[i] + first_derivative[i] + 0.5 * second_derivative[i])
+
+        return np.array(result)
+
+    def solve(self, days):
+        all_states = np.zeros((days, 7))
+        curr_states = self.initial_conditions
+        all_states[0, :] = curr_states
+
+        for t in range(1, days):
+            curr_states = self.solve_one_time_point(curr_states, t)
+            all_states[t, :] = curr_states
+
+        return all_states
+
 
 
 if __name__ == "__main__":
@@ -82,15 +111,16 @@ if __name__ == "__main__":
     fi = 1 / 120  # from M to S
     gamma = 1 / 14  # from EIR to M
     alpha = 0.2  # from E to I
-    beta = 0.3  # from S to E == contact rate
+    beta = 0.45  # from S to E == contact rate
     sigma = alpha  # from I to R
-    omega = 0.008 * 0.9  # from S to V, кількість вакцинованих за день * якість вакцини  
+    omega = 0  # from S to V, кількість вакцинованих за день * якість вакцини
     delta = 1 / 50  # from R to D
-    theta = 1/365  # from V to S, тривалість дії вакцини
+    theta = 1/100  # from V to S, тривалість дії вакцини
 
+    days = 300
 
-    S0 = 0.9
-    E0 = 0.1
+    S0 = 0.1
+    E0 = 0.9
     I0 = 0
     R0 = 0
     V0 = 0
@@ -98,16 +128,13 @@ if __name__ == "__main__":
     M0 = 0
 
     sir = SEIRVS(beta, omega, fi, gamma, alpha, sigma, delta, theta, S0, E0, I0, R0, V0, D0, M0)
-    solver = ForwardEuler(sir)
-    solver.set_initial_conditions(sir.initial_conditions)
 
-    time_steps = np.linspace(0, 60, 60)
+    u = sir.solve(days)
 
-    u, t = solver.solve(time_steps)
+    t = np.linspace(0, days, days)
 
-    # for x in u:
-    #     print(x)
-    # print(t)
+    for x in u:
+        print(x)
 
     plt.plot(t, u[:, 0], label="S")
     plt.plot(t, u[:, 1], label="E")
