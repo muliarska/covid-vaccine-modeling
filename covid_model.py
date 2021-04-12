@@ -49,12 +49,9 @@ class CovidModel:
         for i in range(self.number_people):
             # всі зі всіма
 
-            # self.matrix[i] = [1 for _ in range(self.number_people)]
-            # self.matrix[i][i] = 0
-
             for x in range(i):
                 self.matrix[i][x] = self.matrix[x][i]
-            
+
             for j in range(i + 1, self.number_people):
                 random_numb = random.random()
                 if random_numb < self.prob_connect:
@@ -95,20 +92,16 @@ class CovidModel:
                            sum_i/self.number_people, sum_r/self.number_people,
                            sum_v/self.number_people, sum_d/self.number_people,
                            sum_m/self.number_people])
-        # return np.asarray([sum_s, sum_e,
-        #                    sum_i, sum_r,
-        #                    sum_v, sum_d,
-        #                    sum_m])
 
     def covid_model(self, numb_of_days):
 
         for day in range(numb_of_days):
 
-            if day % 10 == 0:
-                # змінює звязки кожні 10 днів
-                # print(self.people_states)
-                # print("\n")
-                self.build_matrix()
+            # if day % 10 == 0:
+            #     # змінює звязки кожні 10 днів
+            #     # print(self.people_states)
+            #     # print("\n")
+            #     self.build_matrix()
 
             temporary_states = self.people_states.copy()
 
@@ -133,6 +126,7 @@ class CovidModel:
 
                 elif self.people_states[person] == 'e':
                     random_numb = random.random()
+
                     if random_numb < self.alpha:
                         temporary_states[person] = 'i'
                     elif (self.alpha <= random_numb) and (random_numb <= self.alpha + self.gamma):
@@ -162,12 +156,20 @@ class CovidModel:
                     if random_numb < self.fi:
                         temporary_states[person] = 's'
 
-
             self.number_of_people_each_state[day] = self.get_states()
+
+            if self.number_of_people_each_state[day][1] == 0:
+                rand_person = random.randint(0, self.number_people - 1)
+                temporary_states[rand_person] = 'e'
+            if self.number_of_people_each_state[day][2] == 0:
+                rand_person = random.randint(0, self.number_people - 1)
+                temporary_states[rand_person] = 'i'
+
             self.people_states = temporary_states
 
     def run_simulation(self):
         self.build_matrix()
+        # self.print_matrix()
         self.covid_model(self.days)
 
     def plot(self):
@@ -177,6 +179,8 @@ class CovidModel:
         t = np.asarray(time_steps)
         u = np.asarray(self.number_of_people_each_state)
 
+        print(u, "\n", t)
+
         plt.plot(t, u[:, 0], label="S")
         plt.plot(t, u[:, 1], label="E")
         plt.plot(t, u[:, 2], label="I")
@@ -185,25 +189,21 @@ class CovidModel:
         plt.plot(t, u[:, 5], label="D")
         plt.plot(t, u[:, 6], label="M")
 
-    
-
         return plt
 
 
-if __name__ == '__main__':
-
-    fi = 1 / 120  # from V to S
-    gamma = 1 / 14  # from EIR to V
-    alpha = 0.2  # from E to I
-    beta = 0.3  # from S to E == contact rate
-    sigma = alpha  # from I to R
-    omega = 0.008 * 0.9  # from S to V, кількість вакцинованих за день * якість вакцини  
-    delta = 1 / 50  # from R to D
-    theta = 1/365  # from V to S, тривалість дії вакцини
-
-    number_people = 1000
-    days = 1000
-    
-
-    model = CovidModel(number_people, days, beta, omega, fi, gamma, alpha, sigma, delta, theta)
-    model.plot()
+# if __name__ == '__main__':
+#     fi = 1 / 120  # from M to S
+#     gamma = 1 / 14  # from EIR to M
+#     alpha = 0.2  # from E to I
+#     beta = 0.6  # from S to E == contact rate
+#     sigma = alpha  # from I to R
+#     omega = 0  # from S to V, кількість вакцинованих за день * якість вакцини
+#     delta = 1 / 50  # from R to D
+#     theta = 1 / 100  # from V to S, тривалість дії вакцини
+#
+#     number_people = 300
+#     days = 60
+#
+#     model = CovidModel(number_people, days, beta, omega, fi, gamma, alpha, sigma, delta, theta)
+#     model.plot()

@@ -3,25 +3,25 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 def read_config(filename):
-    with open(filename) as file:
-        fi_arr = file.readline().split()[2].split('/')
-        fi = float(fi_arr[0])/float(fi_arr[1])
-        gamma_arr = file.readline().split()[2].split('/')
-        gamma = float(gamma_arr[0])/float(gamma_arr[1])
-        alpha = float(file.readline().split()[2])
-        beta = float(file.readline().split()[2])
-        sigma = float(file.readline().split()[2])
-        omega_arr = file.readline().split()[2].split('*')
-        omega = float(omega_arr[0])*float(omega_arr[1])
-        delta_arr = file.readline().split()[2].split('/')
-        delta = float(delta_arr[0])/float(delta_arr[1])
-        theta_arr = file.readline().split()[2].split('/')
-        theta = float(theta_arr[0])/float(theta_arr[1])
+    # fi = 1 / 120  # from M to S
+    # gamma = 1 / 14  # from EIR to M
+    # alpha = 0.2  # from E to I
+    # beta = 0.9  # from S to E == contact rate
+    # sigma = 0.2  # from I to R
+    # omega = 0  # from S to V, кількість вакцинованих за день * якість вакцини
+    # delta = 1 / 50  # from R to D
+    # theta = 1 / 100  # from V to S, тривалість дії вакцини
+
+    fi = 1 / 120  # from M to S
+    gamma = 1 / 14  # from EIR to M
+    alpha = 0.2  # from E to I
+    beta = 0.45  # from S to E == contact rate
+    sigma = 0.2  # from I to R
+    omega = 0  # from S to V, кількість вакцинованих за день * якість вакцини
+    delta = 1 / 50  # from R to D
+    theta = 1 / 100  # from V to S, тривалість дії вакцини
 
     return fi, gamma, alpha, beta, sigma, omega, delta, theta
-
-        
-
 
 
 def average_plot(number_of_simulations, number_people, days):
@@ -42,6 +42,9 @@ def average_plot(number_of_simulations, number_people, days):
     t = np.asarray(time_steps)
     u = np.asarray(result)
 
+    for x in u:
+        print(x)
+
     plt.plot(t, u[:, 0], label="S")
     plt.plot(t, u[:, 1], label="E")
     plt.plot(t, u[:, 2], label="I")
@@ -53,11 +56,12 @@ def average_plot(number_of_simulations, number_people, days):
     plt.legend()
     plt.show()
 
+
 if __name__ == '__main__':
-    number_people = 100
-    days = 250
+    number_people = 128*128
+    days = 1000
     
-    number_of_simulations = 100
+    number_of_simulations = 2
     
     average_plot(number_of_simulations, number_people, days)
     # read_config('config.txt')

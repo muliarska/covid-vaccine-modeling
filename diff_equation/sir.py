@@ -109,18 +109,18 @@ class SEIRVS:
 if __name__ == "__main__":
 
     fi = 1 / 120  # from M to S
-    gamma = 1 / 14  # from EIR to M
+    gamma = 1 / 21  # from EIR to M
     alpha = 0.2  # from E to I
-    beta = 0.45  # from S to E == contact rate
+    beta = 0.4  # from S to E == contact rate
     sigma = alpha  # from I to R
     omega = 0  # from S to V, кількість вакцинованих за день * якість вакцини
     delta = 1 / 50  # from R to D
     theta = 1/100  # from V to S, тривалість дії вакцини
 
-    days = 300
+    days = 600
 
-    S0 = 0.1
-    E0 = 0.9
+    S0 = 1 - 10**(-5)
+    E0 = 10**(-5)
     I0 = 0
     R0 = 0
     V0 = 0
