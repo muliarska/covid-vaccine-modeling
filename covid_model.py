@@ -22,7 +22,9 @@ class CovidModel:
         self.number_people = number_people
         self.days = days
 
-        self.prob_connect = beta
+        
+        # всі зі всіма
+        self.prob_connect = 0.01
 
         self.beta = beta
         self.omega = omega
@@ -47,7 +49,6 @@ class CovidModel:
         self.matrix = [[0 for _ in range(self.number_people)] for _ in range(self.number_people)]
 
         for i in range(self.number_people):
-            # всі зі всіма
 
             for x in range(i):
                 self.matrix[i][x] = self.matrix[x][i]
@@ -93,15 +94,15 @@ class CovidModel:
                            sum_v/self.number_people, sum_d/self.number_people,
                            sum_m/self.number_people])
 
-    def covid_model(self, numb_of_days):
+    def covid_model(self, numb_of_days, start_vacine):
 
         for day in range(numb_of_days):
 
-            # if day % 10 == 0:
-            #     # змінює звязки кожні 10 днів
-            #     # print(self.people_states)
-            #     # print("\n")
-            #     self.build_matrix()
+            if day % 10 == 0:
+                # змінює звязки кожні 10 днів
+                # print(self.people_states)
+                # print("\n")
+                self.build_matrix()
 
             temporary_states = self.people_states.copy()
 
@@ -120,8 +121,9 @@ class CovidModel:
                     beta = self.beta * (infected/(not_infected+infected))
                     if random_numb < beta:
                         temporary_states[person] = 'e'
-                        break
-                    if (random_numb >= beta) and (random_numb <= beta + self.omega):
+
+                    if (random_numb >= beta) and (random_numb <= beta + self.omega)\
+                            and (day >= start_vacine):
                         temporary_states[person] = 'v'
 
                 elif self.people_states[person] == 'e':
@@ -156,6 +158,7 @@ class CovidModel:
                     if random_numb < self.fi:
                         temporary_states[person] = 's'
 
+
             self.number_of_people_each_state[day] = self.get_states()
 
             if self.number_of_people_each_state[day][1] == 0:
@@ -166,44 +169,10 @@ class CovidModel:
                 temporary_states[rand_person] = 'i'
 
             self.people_states = temporary_states
+            if day % 50 == 0:
+                print("\nDay", day)
 
-    def run_simulation(self):
+    def run_simulation(self, start_vacine):
         self.build_matrix()
         # self.print_matrix()
-        self.covid_model(self.days)
-
-    def plot(self):
-        self.run_simulation()
-
-        time_steps = np.linspace(0, self.days, self.days)
-        t = np.asarray(time_steps)
-        u = np.asarray(self.number_of_people_each_state)
-
-        print(u, "\n", t)
-
-        plt.plot(t, u[:, 0], label="S")
-        plt.plot(t, u[:, 1], label="E")
-        plt.plot(t, u[:, 2], label="I")
-        plt.plot(t, u[:, 3], label="R")
-        plt.plot(t, u[:, 4], label="V")
-        plt.plot(t, u[:, 5], label="D")
-        plt.plot(t, u[:, 6], label="M")
-
-        return plt
-
-
-# if __name__ == '__main__':
-#     fi = 1 / 120  # from M to S
-#     gamma = 1 / 14  # from EIR to M
-#     alpha = 0.2  # from E to I
-#     beta = 0.6  # from S to E == contact rate
-#     sigma = alpha  # from I to R
-#     omega = 0  # from S to V, кількість вакцинованих за день * якість вакцини
-#     delta = 1 / 50  # from R to D
-#     theta = 1 / 100  # from V to S, тривалість дії вакцини
-#
-#     number_people = 300
-#     days = 60
-#
-#     model = CovidModel(number_people, days, beta, omega, fi, gamma, alpha, sigma, delta, theta)
-#     model.plot()
+        self.covid_model(self.days, start_vacine)

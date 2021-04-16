@@ -100,6 +100,8 @@ class SEIRVS:
 
         for t in range(1, days):
             curr_states = self.solve_one_time_point(curr_states, t)
+            print("DAY : ", t)
+            print(curr_states)
             all_states[t, :] = curr_states
 
         return all_states
@@ -113,14 +115,14 @@ if __name__ == "__main__":
     alpha = 0.2  # from E to I
     beta = 0.4  # from S to E == contact rate
     sigma = alpha  # from I to R
-    omega = 0  # from S to V, кількість вакцинованих за день * якість вакцини
-    delta = 1 / 50  # from R to D
-    theta = 1/100  # from V to S, тривалість дії вакцини
+    omega = 0.002  # from S to V, кількість вакцинованих за день * якість вакцини
+    delta = 1/50 # from R to D
+    theta = 1/100 # from V to S, тривалість дії вакцини
 
     days = 600
 
-    S0 = 1 - 10**(-5)
-    E0 = 10**(-5)
+    S0 = 0.9
+    E0 = 0.1
     I0 = 0
     R0 = 0
     V0 = 0
@@ -133,8 +135,8 @@ if __name__ == "__main__":
 
     t = np.linspace(0, days, days)
 
-    for x in u:
-        print(x)
+    # for x in u:
+    #     print(x)
 
     plt.plot(t, u[:, 0], label="S")
     plt.plot(t, u[:, 1], label="E")
