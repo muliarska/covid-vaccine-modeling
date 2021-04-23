@@ -23,8 +23,7 @@ class CovidModel:
         self.days = days
 
         
-        # всі зі всіма
-        self.prob_connect = 0.01
+        self.prob_connect = 100/self.number_people
 
         self.beta = beta
         self.omega = omega
@@ -94,9 +93,16 @@ class CovidModel:
                            sum_v/self.number_people, sum_d/self.number_people,
                            sum_m/self.number_people])
 
-    def covid_model(self, numb_of_days, start_vacine):
-
-        for day in range(numb_of_days):
+    def covid_model(self, start_vacine, lockdown_dates):
+        date_counter = 0
+        for day in range(self.days):
+            if date_counter < len(lockdown_dates) and day == lockdown_dates[date_counter][0]:
+                self.prob_connect = 5 / self.number_people
+                self.build_matrix()
+            elif date_counter < len(lockdown_dates) and day == lockdown_dates[date_counter][0]:
+                self.prob_connect = 100 / self.number_people
+                self.build_matrix()
+                date_counter += 1
 
             if day % 10 == 0:
                 # змінює звязки кожні 10 днів
@@ -113,12 +119,16 @@ class CovidModel:
                     infected = 0
                     not_infected = 0
                     for ind in range(self.number_people):
-                        if (self.people_states[ind] == 'e') or (self.people_states[ind] == 'i'):
-                            # здорова людина контактує з хворим
-                            infected += 1
-                        else:
-                            not_infected += 1
-                    beta = self.beta * (infected/(not_infected+infected))
+                        if self.matrix[person][ind] == 1:
+                            if (self.people_states[ind] == 'e') or (self.people_states[ind] == 'i'):
+                                # здорова людина контактує з хворим
+                                infected += 1
+                            else:
+                                not_infected += 1
+                    if (not_infected+infected) == 0:
+                        beta = 0
+                    else:
+                        beta = self.beta * (infected/(not_infected+infected))
                     if random_numb < beta:
                         temporary_states[person] = 'e'
 

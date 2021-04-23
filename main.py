@@ -9,12 +9,15 @@ def read_config(filename):
     alpha = 0.2  # from E to I
     beta = 0.4  # from S to E == contact rate
     sigma = alpha  # from I to R
-    omega = 0.002 #* 0.9  # from S to V, кількість вакцинованих за день * якість вакцини
+    omega = 0.002 * 0.9  # from S to V, кількість вакцинованих за день * якість вакцини
     delta = 1 / 50  # from R to D
     theta = 1 / 100  # from V to S, тривалість дії вакцини
 
     return fi, gamma, alpha, beta, sigma, omega, delta, theta
 
+# 1) локдаун
+# 2) різний початок вакцинації
+# 3) доступність вакцини фізично і психологічно
 
 def average_plot(number_of_simulations, number_people, days, start_vacine):
     array_of_states = []
