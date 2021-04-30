@@ -6,19 +6,19 @@ from matplotlib import pyplot as plt
 
 # S E I R V D M
 '''
-S' = -beta*(E + I)*S + fi*M - omega*S + theta*V
+S' = -beta*(E + I)*S + fi*M - omega*S + theta*V + lambda*D
 E' = beta*(E + I)*S - (gamma + alpha)E
 I' = alpha*E - (gamma + sigma)I
 R' = sigma*I - gamma*R - delta*R
 V' = omega*S - theta*V
-D' = delta*R
+D' = delta*R - lambda*D
 M' = gamma*(E + I + R) - fi*M
 M = імунний
 '''
 
 
 class CovidModel:
-    def __init__(self, number_people, days, beta, omega, fi, gamma, alpha, sigma, delta, theta):
+    def __init__(self, number_people, days, beta, omega, fi, gamma, alpha, sigma, delta, theta, lambda_):
         self.number_people = number_people
         self.days = days
 
@@ -33,8 +33,13 @@ class CovidModel:
         self.sigma = sigma
         self.delta = delta
         self.theta = theta
+        self.lambda_ = lambda_
 
         self.number_of_people_each_state = np.zeros((days, 7))
+
+        self.check_lockdown = 0
+        self.limit_amount_of_r = 0.001
+        self.max_increasing = 5
 
         self.set_up_states()
 
@@ -93,22 +98,31 @@ class CovidModel:
                            sum_v/self.number_people, sum_d/self.number_people,
                            sum_m/self.number_people])
 
-    def covid_model(self, start_vacine, lockdown_dates):
-        date_counter = 0
+    def covid_model(self, start_vacine):
+        lockdown = 0
+
         for day in range(self.days):
-            if date_counter < len(lockdown_dates) and day == lockdown_dates[date_counter][0]:
-                self.prob_connect = 5 / self.number_people
-                self.build_matrix()
-            elif date_counter < len(lockdown_dates) and day == lockdown_dates[date_counter][0]:
-                self.prob_connect = 100 / self.number_people
-                self.build_matrix()
-                date_counter += 1
 
             if day % 10 == 0:
                 # змінює звязки кожні 10 днів
                 # print(self.people_states)
                 # print("\n")
                 self.build_matrix()
+
+            if self.check_lockdown == self.max_increasing:
+                print("Start lockdown: {}".format(day))
+                # self.prob_connect = 5 / self.number_people
+                self.prob_connect = 0
+                self.build_matrix()
+                self.check_lockdown = 0
+                lockdown = day
+
+            if day == lockdown + 21:
+                print("End lockdown: {}".format(day))
+                self.prob_connect = 100 / self.number_people
+                self.build_matrix()
+                lockdown = 0
+
 
             temporary_states = self.people_states.copy()
 
@@ -168,8 +182,17 @@ class CovidModel:
                     if random_numb < self.fi:
                         temporary_states[person] = 's'
 
+                elif self.people_states[person] == 'd':
+                    random_numb = random.random()
+                    if random_numb < self.lambda_:
+                        temporary_states[person] = 's'
 
             self.number_of_people_each_state[day] = self.get_states()
+
+            if lockdown == 0 and (self.number_of_people_each_state[day][3] - self.number_of_people_each_state[day-1][3]) > self.limit_amount_of_r:
+                self.check_lockdown += 1
+            elif lockdown == 0:
+                self.check_lockdown = 0
 
             if self.number_of_people_each_state[day][1] == 0:
                 rand_person = random.randint(0, self.number_people - 1)
@@ -182,7 +205,3 @@ class CovidModel:
             if day % 50 == 0:
                 print("\nDay", day)
 
-    def run_simulation(self, start_vacine):
-        self.build_matrix()
-        # self.print_matrix()
-        self.covid_model(self.days, start_vacine)
