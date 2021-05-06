@@ -12,7 +12,7 @@ def read_config(filename):
     beta = 0.4  # from S to E == contact rate
     sigma = alpha  # from I to R
     omega = 0.002 * 0.9  # from S to V, кількість вакцинованих за день * якість вакцини
-    delta = 1 / 50  # from R to D
+    delta = 1 / 100  # from R to D ?
     theta = 1 / 100  # from V to S, тривалість дії вакцини
     lambda_ = 0 # from D to S
 
@@ -71,19 +71,26 @@ def compare_state_for_lockdown(number_of_simulations, number_people, days, start
 
 
 def compare_state_for_vaccine(number_of_simulations, number_people, days, state_number):
-    pass
+    start_vaccine = 50
+    while start_vaccine < days:
+        t, u = average_plot(number_of_simulations, number_people, days, start_vaccine, False)
+        plt.plot(t, u[:, state_number], label=STATES[state_number] + " vaccine start: " + start_vacine)
+        start_vaccine =+ 50
+
+    plt.legend()
+    plt.show()
 
 
 if __name__ == '__main__':
-    number_people = 64 * 64
-    days = 700
-    start_vacine = 701
-    is_lockdown = True
+    number_people = 1000
+    days = 400
+    # start_vaccine = 701
+    # is_lockdown = True
     
-    number_of_simulations = 5
+    number_of_simulations = 1
     
     # t, u = average_plot(number_of_simulations, number_people, days, start_vacine, is_lockdown)
     # plot(t, u)
 
     state_numb = 3
-    compare_state_for_lockdown(number_of_simulations, number_people, days, start_vacine, state_numb)
+    compare_state_for_vaccine(number_of_simulations, number_people, days, state_numb)

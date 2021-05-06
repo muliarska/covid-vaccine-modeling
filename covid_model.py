@@ -40,6 +40,7 @@ class CovidModel:
         self.check_lockdown = 0
         self.limit_amount_of_r = 0.001
         self.max_increasing = 5
+        # статистика
 
         self.set_up_states()
 
