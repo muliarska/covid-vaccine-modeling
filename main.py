@@ -73,7 +73,7 @@ def compare_state_for_lockdown(number_of_simulations, number_people, days, start
 def compare_state_for_vaccine(number_of_simulations, number_people, days, state_number):
     start_vaccine = 100
     while start_vaccine < days:
-        t, u = average_plot(number_of_simulations, number_people, days, start_vaccine, False)
+        t, u = average_plot(number_of_simulations, number_people, days, start_vaccine, True)
         plt.plot(t, u[:, state_number], label=STATES[state_number] + " vaccine start: " + str(start_vaccine))
         start_vaccine += 100
 
