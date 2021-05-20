@@ -22,6 +22,7 @@ class CovidModel:
         self.number_people = number_people
         self.days = days
 
+        self.max_contacts = int(self.number_people * 0.01)
         
         self.prob_connect = 100/self.number_people
 
@@ -53,15 +54,23 @@ class CovidModel:
         # будується матриця з звязками
         self.matrix = [[0 for _ in range(self.number_people)] for _ in range(self.number_people)]
 
-        for i in range(self.number_people):
-
+        def make_contacts(prob_connect):
             for x in range(i):
                 self.matrix[i][x] = self.matrix[x][i]
 
             for j in range(i + 1, self.number_people):
                 random_numb = random.random()
-                if random_numb < self.prob_connect:
+                if random_numb < prob_connect:
                     self.matrix[i][j] = 1
+
+        for i in range(self.max_contacts):
+            make_contacts(self.prob_connect * 100)
+
+        for i in range(self.max_contacts, self.max_contacts * 2):
+            make_contacts(self.prob_connect / 100)
+
+        for i in range(self.max_contacts * 2, self.number_people):
+            make_contacts(self.prob_connect)
 
     def print_matrix(self):
         for m in self.matrix:
@@ -99,7 +108,7 @@ class CovidModel:
                            sum_v/self.number_people, sum_d/self.number_people,
                            sum_m/self.number_people])
 
-    def covid_model(self, start_vacine):
+    def covid_model(self, start_vacine, who_vaccinated):
         lockdown = 0
 
         for day in range(self.days):
@@ -130,6 +139,12 @@ class CovidModel:
             for person in range(self.number_people):
 
                 if self.people_states[person] == 's':
+                    if (who_vaccinated == 1) and (person < self.max_contacts) and (day >= start_vacine):
+                        temporary_states[person] = 'v'
+                    elif (who_vaccinated == 0) and (self.max_contacts < person < (self.max_contacts * 2))\
+                            and (day >= start_vacine):
+                        temporary_states[person] = 'v'
+
                     random_numb = random.random()
                     infected = 0
                     not_infected = 0

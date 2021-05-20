@@ -22,7 +22,7 @@ def read_config(filename):
 # 2) різний початок вакцинації
 # 3) доступність вакцини фізично і психологічно
 
-def average_plot(number_of_simulations, number_people, days, start_vacine, is_lockdown):
+def average_plot(number_of_simulations, number_people, days, start_vacine, is_lockdown, who_vaccinated):
     array_of_states = []
     result = []
 
@@ -33,7 +33,7 @@ def average_plot(number_of_simulations, number_people, days, start_vacine, is_lo
         temp_model.build_matrix()
         if not is_lockdown:
             temp_model.limit_amount_of_r = 1
-        temp_model.covid_model(start_vacine)
+        temp_model.covid_model(start_vacine, who_vaccinated)
         array_of_states.append(temp_model.number_of_people_each_state)
 
     for i in range(days):
@@ -60,10 +60,10 @@ def plot(t, u):
 
 
 def compare_state_for_lockdown(number_of_simulations, number_people, days, start_vacine, state_number):
-    t, u = average_plot(number_of_simulations, number_people, days, start_vacine, True)
+    t, u = average_plot(number_of_simulations, number_people, days, start_vacine, True, 1)
     plt.plot(t, u[:, state_number], label=STATES[state_number] + " with lockdown")
 
-    t, u = average_plot(number_of_simulations, number_people, days, start_vacine, False)
+    t, u = average_plot(number_of_simulations, number_people, days, start_vacine, False, 1)
     plt.plot(t, u[:, state_number], label=STATES[state_number] + " without lockdown")
 
     plt.legend()
@@ -73,9 +73,20 @@ def compare_state_for_lockdown(number_of_simulations, number_people, days, start
 def compare_state_for_vaccine(number_of_simulations, number_people, days, state_number):
     start_vaccine = 100
     while start_vaccine < days:
-        t, u = average_plot(number_of_simulations, number_people, days, start_vaccine, True)
+        t, u = average_plot(number_of_simulations, number_people, days, start_vaccine, True, 1)
         plt.plot(t, u[:, state_number], label=STATES[state_number] + " vaccine start: " + str(start_vaccine))
         start_vaccine += 100
+
+    plt.legend()
+    plt.show()
+
+
+def compare_vaccine_max_min_contacts(number_of_simulations, number_people, days, state_number, start_vaccine):
+    t, u = average_plot(number_of_simulations, number_people, days, start_vaccine, True, 1)
+    plt.plot(t, u[:, state_number], label=STATES[state_number] + " vaccinated max connection start: " + str(start_vaccine))
+
+    t, u = average_plot(number_of_simulations, number_people, days, start_vaccine, True, 0)
+    plt.plot(t, u[:, state_number], label=STATES[state_number] + " vaccinated min connection start: " + str(start_vaccine))
 
     plt.legend()
     plt.show()
@@ -84,7 +95,7 @@ def compare_state_for_vaccine(number_of_simulations, number_people, days, state_
 if __name__ == '__main__':
     number_people = 1000
     days = 400
-    # start_vaccine = 701
+    start_vaccine = 100
     # is_lockdown = True
     
     number_of_simulations = 1
@@ -93,4 +104,5 @@ if __name__ == '__main__':
     # plot(t, u)
 
     state_numb = 3
-    compare_state_for_vaccine(number_of_simulations, number_people, days, state_numb)
+    # compare_state_for_vaccine(number_of_simulations, number_people, days, state_numb)
+    compare_vaccine_max_min_contacts(number_of_simulations, number_people, days, state_numb, start_vaccine)
