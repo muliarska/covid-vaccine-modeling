@@ -59,6 +59,12 @@ class CovidModel {
     std::vector<std::vector<unsigned int>> adj_matrix;
     std::unordered_map<char, std::pair<char, double>> transition_states;
     std::vector<std::map<char, double>> perc_of_people_each_state;
+    std::map<int, char> s_trans_states = {
+            {0, S_STATE},
+            {1, E_STATE},
+            {2, V_STATE},
+            {3, V_STATE}
+    };
 
     int check_lockdown = 0; // TODO
     double limit_amount_of_r = 0.001;
@@ -79,6 +85,8 @@ private:
     void build_matrix();
     void init_transition_states();
     void run_simulation(std::vector<char> &temp_states, size_t day);
+    char get_s_next_state(double beta, size_t day, size_t person);
+    char get_next_state(char curr_state, double trans_prob, char next_state);
     std::map<char, double> get_states();
     std::pair<size_t, size_t> get_infected_num(size_t person);
 };

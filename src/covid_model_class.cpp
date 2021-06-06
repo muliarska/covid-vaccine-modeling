@@ -53,10 +53,6 @@ std::vector<double> CovidModel::init_prob_connect() {
 
 void CovidModel::build_matrix() {
     std::vector<double> prob_connect_array = init_prob_connect();
-//    for (auto t: prob_connect_array){
-//        std::cout<<t;
-//    }
-//    std::cout<<"\n"<<std::endl;
     std::vector<std::vector<unsigned int>> matrix{};
     matrix.reserve(config.people_num);
 
@@ -156,9 +152,6 @@ void CovidModel::covid_model() {
             lockdown = 0;
         }
 
-//        std::cout<<"\n end!!!"<<std::endl;
-
-
         if ((config.when_vaccinated == -1) && (config.start_vaccine == config.days) && (check_vaccine == max_point_vaccine / 2)) {
             config.start_vaccine = day + 1;
             std::cout<< "Start vaccine on day " << day+1 << std::endl;
@@ -172,12 +165,10 @@ void CovidModel::covid_model() {
             std::cout<< "Start vaccine on day " << day+1 << std::endl;
         }
 
-
         std::vector<char> temp_states = people_states;
         run_simulation(temp_states, day);
 
         perc_of_people_each_state.push_back(get_states());
-
 
         if (not lockdown && day > 0) {
             if ((perc_of_people_each_state[day][R_STATE] - perc_of_people_each_state[day - 1][R_STATE]) > limit_amount_of_r) {
@@ -187,15 +178,12 @@ void CovidModel::covid_model() {
             check_lockdown = 0;
         }
 
-
         if ((day > 0) && ((perc_of_people_each_state[day][R_STATE] - perc_of_people_each_state[day-1][R_STATE]) > limit_r_for_vaccine)) {
             ++check_vaccine;
         }
-
         if ((day > 0) && ((perc_of_people_each_state[day-1][R_STATE] - perc_of_people_each_state[day][R_STATE]) > limit_r_for_vaccine)) {
             ++decreasing_of_r;
         }
-
 
         if (not perc_of_people_each_state[day][E_STATE]) {
             int rand_person = randint(0l, config.people_num - 1);
@@ -205,58 +193,78 @@ void CovidModel::covid_model() {
             int rand_person = randint(0l, config.people_num - 1);
             temp_states[rand_person] = I_STATE;
         }
-
         people_states = temp_states;
-
     }
 }
 
 
+char CovidModel::get_s_next_state(double beta, size_t day, size_t person) {
+    double rand_f = randfloat();
+
+    int tr_state = 0;
+    bool a = rand_f < beta;
+    bool b = rand_f >= beta && rand_f <= beta + states.omega && day >= config.start_vaccine;
+    bool c = (config.who_vaccinated && person < config.max_contacts && day >= config.start_vaccine) || \
+             (not config.who_vaccinated && config.max_contacts < person && person < (config.max_contacts * 2)
+             && day >= config.start_vaccine);
+
+    tr_state += c;
+    tr_state = (tr_state << 1) + b;
+    tr_state = (tr_state << 1) + a;
+
+    return s_trans_states[ceil(log2(tr_state + 1))]; // add 1 to balance out binary numbers
+}
+
+
+char CovidModel::get_next_state(char curr_state, double trans_prob, char next_state) {
+    std::map<int, char> trans_states = {
+        {0, curr_state},
+        {1, next_state},
+        {2, M_STATE}
+    };
+
+    double rand_f = randfloat();
+    int tr_state = 0;
+
+    bool a = rand_f < trans_prob;
+    bool b = HAS_FLAG(curr_state) && trans_prob <= rand_f && rand_f <= trans_prob + states.gamma;
+
+    tr_state += b;
+    tr_state = (tr_state << 1) + a;
+    return trans_states[ceil(log2(tr_state + 1))];
+}
+
+
 void CovidModel::run_simulation(std::vector<char> &temp_states, size_t day) {
+    std::vector<size_t> s_state_people{};
+    std::vector<size_t> rest_state_people{};
+
+    // separate people on those who are in S state from others
     for(size_t person = 0; person < config.people_num; person++) {
-        double rand_f = randfloat();
-
         if (people_states[person] == S_STATE) {
-            // check if healthy man is in contact with the infected ones
-            std::pair<size_t, size_t> infection_num = get_infected_num(person);
-            size_t infected = infection_num.first, not_infected = infection_num.second;
-
-            double beta;
-            if (infected + not_infected == 0) {
-                beta = 0;
-            } else {
-                beta = states.beta * ((double)infected / (double)(not_infected + infected));
-            }
-
-            if (rand_f < beta) {
-                temp_states[person] = E_STATE;
-            }
-
-            if ((rand_f >= beta) && (rand_f <= beta + states.omega) && (day >= config.start_vaccine)) {
-                temp_states[person] = V_STATE;
-            }
-
-            if ((config.who_vaccinated) && (person < config.max_contacts) && (day >= config.start_vaccine)) {
-
-                temp_states[person] = V_STATE;
-            }
-            else if ((not config.who_vaccinated) && (config.max_contacts < person) && (person < (config.max_contacts * 2)) && (day >= config.start_vaccine)) {
-                temp_states[person] = V_STATE;
-
-            }
-
+            s_state_people.push_back(person);
         } else {
-            char current_state = people_states[person];
-            double transition_prob = transition_states[current_state].second;
-            // if rand_f is less than transition probability, then switch state
-            if (rand_f < transition_prob) {
-                temp_states[person] = transition_states[current_state].first;
-            } else if (HAS_FLAG(current_state)) {
-                if ((transition_prob <= rand_f) && (rand_f <= transition_prob + states.gamma)) {
-                    temp_states[person] = M_STATE;
-                }
-            }
+            rest_state_people.push_back(person);
         }
+    }
+
+    // launch kernel for people in S state
+    for(size_t person : s_state_people) {
+        // check if healthy man is in contact with the infected ones
+        std::pair<size_t, size_t> infection_num = get_infected_num(person);
+        // examine the beta coefficicent
+        size_t inf = infection_num.first, n_inf = infection_num.second;
+        double beta = (inf + n_inf != 0) * (states.beta * ((double)inf / (double)(n_inf + inf)));
+        // switch state
+        temp_states[person] = get_s_next_state(beta, day, person);
+    }
+
+    // lanch kernel for people in other states apart from S
+    for(size_t person: rest_state_people) {
+        char current_state = people_states[person], next_state = transition_states[current_state].first;
+        double trans_prob = transition_states[current_state].second;
+        // switch state
+        temp_states[person] = get_next_state(current_state, trans_prob, next_state);
     }
 }
 

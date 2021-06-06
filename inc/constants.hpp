@@ -11,7 +11,7 @@
 #define INCORRECT_INPUT 2
 #define CFG_VALUE_ERROR 3
 
-#define HAS_FLAG(STATE) ((STATE == E_STATE) || (STATE == I_STATE) || (STATE == R_STATE)) ? (true) : (false)
+#define HAS_FLAG(STATE) ((STATE == E_STATE) || (STATE == I_STATE) || (STATE == R_STATE))
 
 // INCLUDE STATIC VAR DEFINITIONS
 #define INFECT_PROB 0.1

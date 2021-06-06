@@ -23,7 +23,7 @@ int main() {
     std::string out_path = "../output.txt";
 
     // set up srand() for random
-        srand(time(NULL));
+    srand(time(NULL));
 
     config_t config{};
     states_t states{};
