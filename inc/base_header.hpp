@@ -29,12 +29,12 @@
 
 // INCLUDE STRUCTS
 struct config_t {
-    long people_num;
-    long days, start_vaccine;
+    size_t people_num;
+    size_t days, start_vaccine;
     bool who_vaccinated;
     int when_vaccinated;
     double prob_connect;
-    long max_contacts;
+    size_t max_contacts;
     bool is_lockdown;
 };
 
@@ -80,7 +80,7 @@ public:
     void covid_model();
     std::vector<std::map<char, double>> get_state_percentages();
 private:
-    void set_up_states();
+    void init_states();
     std::vector<double> init_prob_connect();
     void build_matrix();
     void init_transition_states();

@@ -7,13 +7,13 @@ CovidModel::CovidModel(config_t &cfg, states_t &st) {
     states = st;
     config.prob_connect = 100.0 / (double)config.people_num; // TODO: add to config
     config.max_contacts = (long) (config.people_num * 0.01);
-    set_up_states();
+    init_states();
     init_transition_states();
 }
 
 
 /* Assign S state to not infected people and E state to the infected ones. */
-void CovidModel::set_up_states() {
+void CovidModel::init_states() {
     long infected_num = (long)(INFECT_PROB * (double)config.people_num);
 
     people_states = initialize_array(S_STATE, config.people_num - infected_num);
@@ -61,24 +61,11 @@ void CovidModel::build_matrix() {
         row.reserve(ceil((double)(config.people_num - n) / WINDOW_SIZE));
 
         for(size_t m = n; m < config.people_num; m += WINDOW_SIZE) {
-            int window_end = WINDOW_SIZE;
-            // Consider the case when we have less than 32 entries to encode in bits
-            // In this case, we want to shift all our bits to the front (make them "older")
-            if (m + WINDOW_SIZE >= config.people_num) {
-                window_end = (int)(config.people_num - m);
-            }
-            // Encode entries
+            // let the spare bits of the last window be encoded
+            // as we don't care about what values these bits have
             unsigned int encoded_bits = 0;
-            for (size_t entry = 1; entry < window_end; entry++) {
-                if (randfloat() < prob_connect_array[n]) {
-                    encoded_bits = (encoded_bits << 1) + 1;
-                } else {
-                    encoded_bits <<= 1;
-                }
-            }
-            // Shift all our bits to the front (make them "older") in special case
-            if (m + WINDOW_SIZE >= config.people_num) {
-                encoded_bits <<= WINDOW_SIZE - window_end;
+            for (size_t entry = 1; entry < WINDOW_SIZE; entry++) {
+                encoded_bits = (encoded_bits << 1) + (randfloat() < prob_connect_array[n]);
             }
             row.push_back(encoded_bits);
         }
@@ -186,11 +173,11 @@ void CovidModel::covid_model() {
         }
 
         if (not perc_of_people_each_state[day][E_STATE]) {
-            int rand_person = randint(0l, config.people_num - 1);
+            int rand_person = randint((size_t)0, config.people_num - 1);
             temp_states[rand_person] = E_STATE;
         }
         if (not perc_of_people_each_state[day][I_STATE]) {
-            int rand_person = randint(0l, config.people_num - 1);
+            int rand_person = randint((size_t)0, config.people_num - 1);
             temp_states[rand_person] = I_STATE;
         }
         people_states = temp_states;
@@ -271,31 +258,29 @@ void CovidModel::run_simulation(std::vector<char> &temp_states, size_t day) {
 
 std::pair<size_t, size_t> CovidModel::get_infected_num(size_t person) {
     size_t infected = 0, not_infected = 0;
+    bool is_infected;
     // USE FORMULA
     for(size_t upper_neighbour = 0; upper_neighbour < person; upper_neighbour++) {
         int connection = get_col_required_bit(adj_matrix, person, upper_neighbour);
-        if (connection && (people_states[upper_neighbour] == E_STATE || people_states[upper_neighbour] == I_STATE)) {
-            infected += 1;
-        } else if (connection) {
-            not_infected += 1;
-        }
+        is_infected = (connection && (people_states[upper_neighbour] == E_STATE || people_states[upper_neighbour] == I_STATE));
+
+        infected += is_infected;
+        not_infected += (not is_infected) && connection;
     }
 
     int window_idx = 0;
     for(size_t lower_neighbour = person; lower_neighbour < config.people_num; lower_neighbour += WINDOW_SIZE) {
-        // check for special case
-        int window_end = WINDOW_SIZE;
-        if (lower_neighbour + WINDOW_SIZE >= config.people_num) {
-            window_end = (int)(config.people_num - lower_neighbour);
-        }
+        // check if those encoded bits are on the edge of a matrix,
+        // thus define the endpoint of a window
+        bool is_window_edge = lower_neighbour + WINDOW_SIZE >= config.people_num;
+        int window_end = WINDOW_SIZE * (not is_window_edge) + (int)(config.people_num - lower_neighbour) * is_window_edge;
         // decode bits
         for (size_t bit = 1; bit <= window_end; bit++) {
             int connection = get_required_bit(adj_matrix[person][window_idx], bit);
-            if (connection && (people_states[lower_neighbour] == E_STATE || people_states[lower_neighbour] == I_STATE)) {
-                infected += 1;
-            } else if (connection) {
-                not_infected += 1;
-            }
+            is_infected = (connection && (people_states[lower_neighbour] == E_STATE || people_states[lower_neighbour] == I_STATE));
+
+            infected += is_infected;
+            not_infected += (not is_infected) && connection;
         }
         window_idx++;
     }

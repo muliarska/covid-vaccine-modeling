@@ -51,7 +51,7 @@ void extract_config_args(std::unordered_map<std::string, std::string> &config_da
         assert(config.who_vaccinated >= 0 &&  config.who_vaccinated <= 1 && "<who_vaccinated> should be in range [0, 1].");
 
         config.when_vaccinated = std::stoi(config_data.at("when_vaccinated"));
-        assert(config.when_vaccinated >= -1 &&  config.when_vaccinated <= 1 && "<when_vaccinated> should be in range [-1, 1].");
+        assert(config.when_vaccinated >= -1 && config.when_vaccinated <= 1 && "<when_vaccinated> should be in range [-1, 1].");
 
         config.is_lockdown = std::stoi(config_data.at("is_lockdown"));
         assert(config.is_lockdown >= 0 &&  config.is_lockdown <= 1 && "<is_lockdown> should be in range [0, 1].");
