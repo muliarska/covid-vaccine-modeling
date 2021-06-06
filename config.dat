@@ -1,0 +1,16 @@
+people_num = 4096
+days = 100
+start_vaccine = 0
+who_vaccinated = -1
+when_vaccinated = 1
+is_lockdown = 0
+prob_connect = 0.01
+fi = 0.00833
+gamma = 0.07142
+alpha = 0.2
+beta = 0.4
+sigma = 0.2
+omega = 0.0018
+delta = 0.01
+theta = 0.01
+lambda = 0
