@@ -56,7 +56,6 @@ class CovidModel {
     states_t states{};
 
     std::vector<char> people_states;
-    std::vector<std::vector<unsigned int>> adj_matrix;
     std::unordered_map<char, std::pair<char, double>> transition_states;
     std::vector<std::map<char, double>> perc_of_people_each_state;
     std::map<int, char> s_trans_states = {
@@ -65,6 +64,10 @@ class CovidModel {
             {2, V_STATE},
             {3, V_STATE}
     };
+
+    int *adj_matrix;
+    int *window_indices;
+    std::vector<double> prob_connect;
 
     int check_lockdown = 0; // TODO
     double limit_amount_of_r = 0.001;
@@ -76,14 +79,18 @@ class CovidModel {
     double limit_r_for_vaccine = 0.001;
 public:
     CovidModel(config_t &cfg, states_t &st);
+    ~CovidModel();
     void print_matrix();
     void covid_model();
     std::vector<std::map<char, double>> get_state_percentages();
 private:
     void init_states();
-    std::vector<double> init_prob_connect();
-    void build_matrix();
+    void init_prob_connect();
     void init_transition_states();
+
+    void build_matrix();
+    void run_threads(int threadIdx, int blockIdx, int thread_range, int* matrix);
+
     void run_simulation(std::vector<char> &temp_states, size_t day);
     char get_s_next_state(double beta, size_t day, size_t person);
     char get_next_state(char curr_state, double trans_prob, char next_state);

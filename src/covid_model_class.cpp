@@ -7,8 +7,11 @@ CovidModel::CovidModel(config_t &cfg, states_t &st) {
     states = st;
     config.prob_connect = 100.0 / (double)config.people_num; // TODO: add to config
     config.max_contacts = (long) (config.people_num * 0.01);
+
+    window_indices = get_window_indices(config.people_num);
     init_states();
     init_transition_states();
+    init_prob_connect();
 }
 
 
@@ -36,7 +39,7 @@ void CovidModel::init_transition_states() {
 }
 
 
-std::vector<double> CovidModel::init_prob_connect() {
+void CovidModel::init_prob_connect() {
     std::vector<double> prob_connect_array;
     for (size_t i = 0; i < config.max_contacts; i++) {
         prob_connect_array.push_back(config.prob_connect * 100);
@@ -47,48 +50,62 @@ std::vector<double> CovidModel::init_prob_connect() {
     for (size_t i = config.max_contacts * 2; i < config.people_num; i++) {
         prob_connect_array.push_back(config.prob_connect);
     }
-    return prob_connect_array;
+
+    prob_connect = prob_connect_array;
+}
+
+
+void CovidModel::run_threads(int threadIdx, int blockIdx, int thread_range, int* matrix) {
+    // determine thread boundaries
+    int start = blockIdx + threadIdx * thread_range;
+    int end = start + thread_range;
+
+    int window_idx = window_indices[blockIdx] + threadIdx;
+    for(size_t m = start; m < end; m += WINDOW_SIZE) {
+        // let the spare bits of the last window be encoded
+        // as we don't care about what values these bits have
+        int encoded_bits = 0;
+        for (size_t entry = 1; entry < WINDOW_SIZE; entry++) {
+            encoded_bits = (encoded_bits << 1) + (randfloat() < prob_connect[blockIdx]);
+        }
+        matrix[window_idx] = encoded_bits;
+        window_idx += 1;
+    }
 }
 
 
 void CovidModel::build_matrix() {
-    std::vector<double> prob_connect_array = init_prob_connect();
-    std::vector<std::vector<unsigned int>> matrix{};
-    matrix.reserve(config.people_num);
+    // free dynamically allocated previous matrix as it is invalid
+    free(adj_matrix);
+    // set up new matrix
+    size_t window_num = calc_window_num(config.people_num);
+    auto* matrix = new int[window_num];
+    // simulate multiple thread executing
+    for(size_t blockIdx = 0; blockIdx < config.people_num; blockIdx++) {
+        size_t threads = config.people_num / THREAD_RANGE;
 
-    for(size_t n = 0; n < config.people_num; n++) {
-        std::vector<unsigned int> row{};
-        row.reserve(ceil((double)(config.people_num - n) / WINDOW_SIZE));
-
-        for(size_t m = n; m < config.people_num; m += WINDOW_SIZE) {
-            // let the spare bits of the last window be encoded
-            // as we don't care about what values these bits have
-            unsigned int encoded_bits = 0;
-            for (size_t entry = 1; entry < WINDOW_SIZE; entry++) {
-                encoded_bits = (encoded_bits << 1) + (randfloat() < prob_connect_array[n]);
-            }
-            row.push_back(encoded_bits);
+        for(size_t threadIdx = 0; threadIdx < threads; threadIdx += 1) {
+            run_threads(threadIdx, blockIdx, THREAD_RANGE, matrix);
         }
-        matrix.push_back(row);
     }
     adj_matrix = matrix;
 }
 
 
 void CovidModel::print_matrix() {
-    // for every row
-    for(size_t n = 0; n < config.people_num; n++) {
+    // for every person
+    for(size_t i = 0; i < config.people_num; i += 1) {
         // for every window
-        int window_idx = 0;  // we need to keep track of our entries as we have shifting windows
-        for(size_t m = n; m < config.people_num; m += WINDOW_SIZE) {
-            // check for special case
+        size_t window_idx = window_indices[i];
+        for(size_t j = i; j < config.people_num; j+= WINDOW_SIZE) {
+            // check window end
             int window_end = WINDOW_SIZE;
-            if (m + WINDOW_SIZE >= config.people_num) {
-                window_end = (int)(config.people_num - m);
+            if (j + WINDOW_SIZE >= config.people_num) {
+                window_end = (int)(config.people_num - j);
             }
             // decode bits
-            for (size_t bit = 1; bit <= window_end; bit++) {
-                std::cout << get_required_bit(adj_matrix[n][window_idx], bit) << " ";
+            for(size_t bit = 1; bit <= window_end; bit++) {
+                std::cout << get_required_bit(adj_matrix[window_idx], bit);
             }
             window_idx++;
         }
@@ -261,14 +278,17 @@ std::pair<size_t, size_t> CovidModel::get_infected_num(size_t person) {
     bool is_infected;
     // USE FORMULA
     for(size_t upper_neighbour = 0; upper_neighbour < person; upper_neighbour++) {
-        int connection = get_col_required_bit(adj_matrix, person, upper_neighbour);
+        // determine window index and required bit of a neighbour
+        size_t window_idx = window_indices[upper_neighbour] + (person - upper_neighbour) / WINDOW_SIZE;
+        int connection = get_col_required_bit(adj_matrix[window_idx], person, upper_neighbour);
+
         is_infected = (connection && (people_states[upper_neighbour] == E_STATE || people_states[upper_neighbour] == I_STATE));
 
         infected += is_infected;
         not_infected += (not is_infected) && connection;
     }
 
-    int window_idx = 0;
+    int window_idx = window_indices[person];
     for(size_t lower_neighbour = person; lower_neighbour < config.people_num; lower_neighbour += WINDOW_SIZE) {
         // check if those encoded bits are on the edge of a matrix,
         // thus define the endpoint of a window
@@ -276,7 +296,7 @@ std::pair<size_t, size_t> CovidModel::get_infected_num(size_t person) {
         int window_end = WINDOW_SIZE * (not is_window_edge) + (int)(config.people_num - lower_neighbour) * is_window_edge;
         // decode bits
         for (size_t bit = 1; bit <= window_end; bit++) {
-            int connection = get_required_bit(adj_matrix[person][window_idx], bit);
+            int connection = get_required_bit(adj_matrix[window_idx], bit);
             is_infected = (connection && (people_states[lower_neighbour] == E_STATE || people_states[lower_neighbour] == I_STATE));
 
             infected += is_infected;
@@ -290,4 +310,10 @@ std::pair<size_t, size_t> CovidModel::get_infected_num(size_t person) {
 
 std::vector<std::map<char, double>> CovidModel::get_state_percentages() {
     return perc_of_people_each_state;
+}
+
+
+CovidModel::~CovidModel() {
+    free(adj_matrix);
+    free(window_indices);
 }
