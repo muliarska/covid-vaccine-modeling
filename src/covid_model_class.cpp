@@ -1,5 +1,7 @@
 #include "../inc/base_header.hpp"
 #include "../inc/utils.hpp"
+#include <math.h>
+
 
 
 CovidModel::CovidModel(config_t &cfg, states_t &st) {
@@ -36,23 +38,53 @@ void CovidModel::init_transition_states() {
 }
 
 
-std::vector<double> CovidModel::init_prob_connect() {
+std::vector<double> CovidModel::init_prob_connect(double mean, double variance) {
     std::vector<double> prob_connect_array;
-    for (size_t i = 0; i < config.max_contacts; i++) {
-        prob_connect_array.push_back(config.prob_connect * 100);
+    double prob_connect;
+
+    std::ofstream res_out("../plots/probabilities.txt");
+
+    std::vector<double> prob_con;
+    std::vector<double> part_of_people;
+    double i = 0;
+
+    while (i < 1) {
+        prob_con.push_back(i);
+        part_of_people.push_back(( 1 / sqrt(2*M_PI*variance) ) * exp((-pow(i-mean, 2)) / (2*variance)));
+//        if (i >= mean-0.0001 && i <= mean+0.0001){
+//            std::cout<<"\nHello world!!"<<
+//                       ( 1 / sqrt(2*M_PI*variance) ) * exp((-pow(i-mean, 2)) / (2*variance))<<
+//                       "\n"<<std::endl;
+//        }
+        i += 0.01;
     }
-    for (size_t i = config.max_contacts; i < config.max_contacts * 2; i++) {
-        prob_connect_array.push_back(config.prob_connect / 100);
+
+
+    for (auto t: prob_con){
+        std::cout<<t<<" ";
     }
-    for (size_t i = config.max_contacts * 2; i < config.people_num; i++) {
-        prob_connect_array.push_back(config.prob_connect);
+    std::cout<<"\n"<<std::endl;
+
+    for (auto t: part_of_people){
+        std::cout<<t<<" ";
     }
+    std::cout<<"\n"<<std::endl;
+
+
+    for (size_t i = 0; i < config.people_num; i++) {
+
+        prob_connect = ( 1 / sqrt(2*M_PI*variance) ) * exp((-pow(i-mean, 2)) / (2*variance));
+        prob_connect_array.push_back(prob_connect);
+        res_out << prob_connect << std::endl;
+    }
+
+    res_out.close();
     return prob_connect_array;
 }
 
 
 void CovidModel::build_matrix() {
-    std::vector<double> prob_connect_array = init_prob_connect();
+    std::vector<double> prob_connect_array = init_prob_connect(100/config.people_num, 0.2);
 //    for (auto t: prob_connect_array){
 //        std::cout<<t;
 //    }

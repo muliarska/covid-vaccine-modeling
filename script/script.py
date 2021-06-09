@@ -1,6 +1,8 @@
 import subprocess
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt1
+
 
 STATES = ["S", "E", "I", "R", "V", "D", "M"]
 
@@ -141,10 +143,26 @@ def compare_vaccine_on_peaks(num_of_simulations, state_number):
     plt.savefig("../plots/peaks.png")
 
 
-if __name__ == '__main__':
+def plot_probs(path):
+    with open(path, "r") as output_file:
+        output = output_file.readlines()
 
+    probs = []
+    for line in output:
+        # print(".........", line, float(line))
+        probs.append(float(line))
+
+    # print(probs)
+    plt.plot([i for i in range(len(probs))], probs, label="probs distribution")
+    plt.legend()
+    plt.savefig("../plots/test_distr")
+    plt.show()
+
+
+
+if __name__ == '__main__':
     # compare_state_for_lockdown(1, 3)
     # compare_state_for_vaccine(1, 300, 3)
     # compare_vaccine_max_min_contacts(3, 3)
-    compare_vaccine_on_peaks(1, 3)
-
+    # compare_vaccine_on_peaks(1, 3)
+    plot_probs("../plots/probabilities.txt")

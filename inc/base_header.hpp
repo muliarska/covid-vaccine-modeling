@@ -75,7 +75,7 @@ public:
     std::vector<std::map<char, double>> get_state_percentages();
 private:
     void set_up_states();
-    std::vector<double> init_prob_connect();
+    std::vector<double> init_prob_connect(double mean, double variance);
     void build_matrix();
     void init_transition_states();
     void run_simulation(std::vector<char> &temp_states, size_t day);
