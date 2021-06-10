@@ -1,8 +1,8 @@
 //
 // Created by Yaroslav Morozevych on 4/21/21.
 //
-#include "../inc/base_header.h"
-#include "../inc/config.h"
+#include "../inc/base_header.hpp"
+#include "../inc/config.hpp"
 
 
 void read_config(std::string& filename, config_t& setup, states_t& states) {
