@@ -1,11 +1,11 @@
 //
 // Created by Yaroslav Morozevych on 4/21/21.
 //
-#include "../inc/base_header.hpp"
-#include "../inc/config.hpp"
+#include "../inc/base_header.h"
+#include "../inc/config.h"
 
 
-void read_config(std::string &filename, config_t &setup, states_t &states) {
+void read_config(std::string& filename, config_t& setup, states_t& states) {
     std::ifstream cfg(filename);
 
     if (!cfg.is_open()) {
@@ -35,7 +35,7 @@ void read_config(std::string &filename, config_t &setup, states_t &states) {
 }
 
 
-void extract_config_args(std::unordered_map<std::string, std::string> &config_data, config_t &config, states_t &states) {
+void extract_config_args(std::unordered_map<std::string, std::string>& config_data, config_t& config, states_t& states) {
     try {
         // Read PROGRAM SETUP
         config.people_num = std::stol(config_data.at("people_num"));
@@ -46,15 +46,15 @@ void extract_config_args(std::unordered_map<std::string, std::string> &config_da
 
         config.start_vaccine = std::stol(config_data.at("start_vaccine"));
         assert(config.start_vaccine >= 0 && "<start_vaccine> should be in range [0, inf).");
-        
+
         config.who_vaccinated = std::stoi(config_data.at("who_vaccinated"));
-        assert(config.who_vaccinated >= 0 &&  config.who_vaccinated <= 1 && "<who_vaccinated> should be in range [0, 1].");
+        assert(config.who_vaccinated >= 0 && config.who_vaccinated <= 1 && "<who_vaccinated> should be in range [0, 1].");
 
         config.when_vaccinated = std::stoi(config_data.at("when_vaccinated"));
         assert(config.when_vaccinated >= -1 && config.when_vaccinated <= 1 && "<when_vaccinated> should be in range [-1, 1].");
 
         config.is_lockdown = std::stoi(config_data.at("is_lockdown"));
-        assert(config.is_lockdown >= 0 &&  config.is_lockdown <= 1 && "<is_lockdown> should be in range [0, 1].");
+        assert(config.is_lockdown >= 0 && config.is_lockdown <= 1 && "<is_lockdown> should be in range [0, 1].");
 
         config.prob_connect = std::stod(config_data.at("prob_connect"));
         assert(config.prob_connect >= 0 && "<prob_connect> should be in range [0, 1].");
@@ -87,10 +87,12 @@ void extract_config_args(std::unordered_map<std::string, std::string> &config_da
         states.lambda = std::stod(config_data.at("lambda"));
         assert(states.lambda >= 0 && "<lambda> should be in range [0, inf).");
 
-    } catch (std::out_of_range &e) {
+    }
+    catch (std::out_of_range& e) {
         std::cout << "Missing an argument in the config!\n" << std::endl;
         exit(CFG_VALUE_ERROR);
-    } catch (std::invalid_argument &e) {
+    }
+    catch (std::invalid_argument& e) {
         std::cout << "Invalid argument! All config arguments should be numbers!" << std::endl;
         exit(CFG_VALUE_ERROR);
     }

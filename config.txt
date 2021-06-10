@@ -1,4 +1,4 @@
-people_num = 4096
+people_num = 16384
 days = 100
 start_vaccine = 0
 who_vaccinated = -1
