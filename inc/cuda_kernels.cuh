@@ -6,59 +6,15 @@
 
 
 /* Encode bits in parallel using CUDA API */
-__global__ void encode_bits2(int* adj_matrix, int* window_indices, double* prob_connect, int* people_num, int* thread_range, int* seed) {
-    
-
-    // check if we are not out of range
-    int window_idx = window_indices[blockIdx.x] + threadIdx.x;
-    //int las_window_idx = window_indices[*people_num - 1];
-
-    //if (window_idx > las_window_idx)
-    //    return;
-    // determine thread range boundaries
-    int start = blockIdx.x + threadIdx.x * *thread_range;
-    int end = start + *thread_range;
-
-    // initialize random generator with some local state
-    ///double* rands = rand_sequence(seed, thread_range);
-    // unique thread identificator
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // initialize random number generator for a specific thread
-    curandState localState;
-    //curand_init(*seed + idx, idx, 0, &localState);
-
-    // generate random sequence
-    double* rands = new double[*thread_range];
-    for (int i = 0; i < *thread_range; i++) {
-        rands[i] = 0.1;
-    }
-    int rand_counter = 0;
-
-    // encode bits
-    for (size_t m = start; m < end; m += WINDOW_SIZE) {
-        //if (m > las_window_idx)
-        //    break;
-        // let the spare bits of the last window be encoded
-        // as we don't care about what values these bits have
-        int encoded_bits = 0;
-        for (size_t entry = 1; entry < WINDOW_SIZE; entry++) {
-            encoded_bits = (encoded_bits << 1) + (0.1 < prob_connect[blockIdx.x]);
-        }
-        adj_matrix[window_idx] = encoded_bits;
-        window_idx += 1;
-    }
-    // do we need to free rands?
-}
-
-
-/* Encode bits in parallel using CUDA API */
 __global__ void encode_bits(int* adj_matrix, int* window_indices, double* prob_connect, int* people_num, int* thread_range, int* seed) {
+    // get required window index for certain thread
     int window_idx = window_indices[blockIdx.x] + threadIdx.x;
-    int las_window_idx = window_indices[*people_num - 1];
-
-    if (window_idx > las_window_idx)
+    
+    // check whether we are not out of range
+    int last_window_idx = window_indices[*people_num - 1];
+    if (window_idx > last_window_idx)
         return;
+    
     // initialize random generator with some local state
     double* rands = rand_sequence(thread_range);
     int rand_counter = 0;
@@ -66,11 +22,10 @@ __global__ void encode_bits(int* adj_matrix, int* window_indices, double* prob_c
     // determine thread range boundaries
     int start = blockIdx.x + threadIdx.x * *thread_range;
     int end = start + *thread_range;
-
-    // encode bits
     
+    // encode bits
     for (size_t m = start; m < end; m += WINDOW_SIZE) {
-        if (m > las_window_idx)
+        if (m > last_window_idx)
             break;
         // let the spare bits of the last window be encoded
         // as we don't care about what values these bits have
@@ -81,9 +36,7 @@ __global__ void encode_bits(int* adj_matrix, int* window_indices, double* prob_c
         adj_matrix[window_idx] = encoded_bits;
         window_idx += 1;
     }
-    // do we need to free rands?
 }
-
 
 
 __global__ void s_state_simulation(struct gpu_vars_t* gpu_vars, char* s_trans_states, int* s_state_people, char* temp_states, char* people_states,
