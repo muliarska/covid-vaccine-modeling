@@ -1,8 +1,8 @@
 people_num = 4096
-days = 100
+days = 700
 start_vaccine = 0
-who_vaccinated = -1
 when_vaccinated = 1
+max_min_rand_vaccination = -1
 is_lockdown = 0
 prob_connect = 0.01
 fi = 0.00833

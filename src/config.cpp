@@ -47,8 +47,8 @@ void extract_config_args(std::unordered_map<std::string, std::string> &config_da
         config.start_vaccine = std::stol(config_data.at("start_vaccine"));
         assert(config.start_vaccine >= 0 && "<start_vaccine> should be in range [0, inf).");
         
-        config.who_vaccinated = std::stoi(config_data.at("who_vaccinated"));
-        assert(config.who_vaccinated >= 0 &&  config.who_vaccinated <= 1 && "<who_vaccinated> should be in range [0, 1].");
+        config.max_min_rand_vaccination = std::stoi(config_data.at("max_min_rand_vaccination"));
+        assert(config.max_min_rand_vaccination >= -1 &&  config.max_min_rand_vaccination <= 1 && "<max_min_rand_vaccination> should be in range [0, 1].");
 
         config.when_vaccinated = std::stoi(config_data.at("when_vaccinated"));
         assert(config.when_vaccinated >= -1 &&  config.when_vaccinated <= 1 && "<when_vaccinated> should be in range [-1, 1].");

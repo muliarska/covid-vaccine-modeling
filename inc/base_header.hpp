@@ -31,7 +31,7 @@
 struct config_t {
     long people_num;
     long days, start_vaccine;
-    bool who_vaccinated;
+    int max_min_rand_vaccination;
     int when_vaccinated;
     double prob_connect;
     long max_contacts;
@@ -60,14 +60,22 @@ class CovidModel {
     std::unordered_map<char, std::pair<char, double>> transition_states;
     std::vector<std::map<char, double>> perc_of_people_each_state;
 
+    //Variables for lockdown
     int check_lockdown = 0; // TODO
     double limit_amount_of_r = 0.001;
     int max_increasing = 5;
 
+    //Variables for vaccine on peaks
     int check_vaccine = 0;
     int decreasing_of_r = 0;
     int max_point_vaccine = 16;
     double limit_r_for_vaccine = 0.001;
+
+    //
+    int max_connections_for_min_vaccinations = 60;
+    int min_connections_for_max_vaccinations = 115;
+
+
 public:
     CovidModel(config_t &cfg, states_t &st);
     void print_matrix();
@@ -75,8 +83,7 @@ public:
     std::vector<std::map<char, double>> get_state_percentages();
 private:
     void set_up_states();
-    std::vector<double> init_prob_connect(double mean, double variance);
-    void build_matrix();
+    void build_matrix(int day);
     void init_transition_states();
     void run_simulation(std::vector<char> &temp_states, size_t day);
     std::map<char, double> get_states();

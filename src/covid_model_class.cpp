@@ -8,7 +8,6 @@ CovidModel::CovidModel(config_t &cfg, states_t &st) {
     config = cfg;
     states = st;
     config.prob_connect = 100.0 / (double)config.people_num; // TODO: add to config
-    config.max_contacts = (long) (config.people_num * 0.01);
     set_up_states();
     init_transition_states();
 }
@@ -38,59 +37,11 @@ void CovidModel::init_transition_states() {
 }
 
 
-std::vector<double> CovidModel::init_prob_connect(double mean, double variance) {
-    std::vector<double> prob_connect_array;
-    double prob_connect;
-
-    std::ofstream res_out("../plots/probabilities.txt");
-
-    std::vector<double> prob_con;
-    std::vector<double> part_of_people;
-    double i = 0;
-
-    while (i < 1) {
-        prob_con.push_back(i);
-        part_of_people.push_back(( 1 / sqrt(2*M_PI*variance) ) * exp((-pow(i-mean, 2)) / (2*variance)));
-//        if (i >= mean-0.0001 && i <= mean+0.0001){
-//            std::cout<<"\nHello world!!"<<
-//                       ( 1 / sqrt(2*M_PI*variance) ) * exp((-pow(i-mean, 2)) / (2*variance))<<
-//                       "\n"<<std::endl;
-//        }
-        i += 0.01;
-    }
-
-
-    for (auto t: prob_con){
-        std::cout<<t<<" ";
-    }
-    std::cout<<"\n"<<std::endl;
-
-    for (auto t: part_of_people){
-        std::cout<<t<<" ";
-    }
-    std::cout<<"\n"<<std::endl;
-
-
-    for (size_t i = 0; i < config.people_num; i++) {
-
-        prob_connect = ( 1 / sqrt(2*M_PI*variance) ) * exp((-pow(i-mean, 2)) / (2*variance));
-        prob_connect_array.push_back(prob_connect);
-        res_out << prob_connect << std::endl;
-    }
-
-    res_out.close();
-    return prob_connect_array;
-}
-
-
-void CovidModel::build_matrix() {
-    std::vector<double> prob_connect_array = init_prob_connect(100/config.people_num, 0.2);
-//    for (auto t: prob_connect_array){
-//        std::cout<<t;
-//    }
-//    std::cout<<"\n"<<std::endl;
+void CovidModel::build_matrix(int day) {
     std::vector<std::vector<unsigned int>> matrix{};
     matrix.reserve(config.people_num);
+
+//    std::vector<int> count_connections(config.people_num, 0);
 
     for(size_t n = 0; n < config.people_num; n++) {
         std::vector<unsigned int> row{};
@@ -106,8 +57,10 @@ void CovidModel::build_matrix() {
             // Encode entries
             unsigned int encoded_bits = 0;
             for (size_t entry = 1; entry < window_end; entry++) {
-                if (randfloat() < prob_connect_array[n]) {
+                if (randfloat() < config.prob_connect) {
                     encoded_bits = (encoded_bits << 1) + 1;
+//                    ++count_connections[m+entry];
+//                    ++count_connections[n];
                 } else {
                     encoded_bits <<= 1;
                 }
@@ -121,15 +74,25 @@ void CovidModel::build_matrix() {
         matrix.push_back(row);
     }
     adj_matrix = matrix;
+
+//    if (day == 0){
+//        std::ofstream res_out("../plots/connections.txt");
+//
+//        for (auto n: count_connections){
+//            res_out << n << std::endl;
+//        }
+//        res_out.close();
+//    }
+
 }
 
 
 void CovidModel::print_matrix() {
     // for every row
-    for(size_t n = 0; n < config.people_num; n++) {
+    for(size_t n = config.people_num - 2; n < config.people_num; n++) {
         // for every window
         int window_idx = 0;  // we need to keep track of our entries as we have shifting windows
-        for(size_t m = n; m < config.people_num; m += WINDOW_SIZE) {
+        for(size_t m = 0; m < config.people_num; m += WINDOW_SIZE) {
             // check for special case
             int window_end = WINDOW_SIZE;
             if (m + WINDOW_SIZE >= config.people_num) {
@@ -162,7 +125,7 @@ std::map<char, double> CovidModel::get_states() {
 
 
 void CovidModel::covid_model() {
-    config.start_vaccine = config.days;
+//    config.start_vaccine = config.days;
 
     if (not config.is_lockdown) {
         limit_amount_of_r = 1;
@@ -172,26 +135,26 @@ void CovidModel::covid_model() {
     for(size_t day = 0; day < config.days; day++) {
         if (day % BUILD_TIMESTEP == 0) {
             std::cout << "Day: " << day << std::endl;
-            build_matrix();
+            build_matrix(day);
         }
         // Start Lockdown
         if (check_lockdown == max_increasing) {
-            config.prob_connect = 0.0;
-            build_matrix();
+            config.prob_connect = config.prob_connect/2;
+            build_matrix(day);
             check_lockdown = 0;
             lockdown = day;
         }
         // End of Lockdown
         if (day == lockdown + LOCKDOWN_DURATION) {
             config.prob_connect = 100 / (double) config.people_num;
-            build_matrix();
+            build_matrix(day);
             lockdown = 0;
         }
 
 //        std::cout<<"\n end!!!"<<std::endl;
 
 
-        if ((config.when_vaccinated == -1) && (config.start_vaccine == config.days) && (check_vaccine == max_point_vaccine / 2)) {
+        if ((config.when_vaccinated == -1) && (config.start_vaccine == config.days) && (check_vaccine == max_point_vaccine / 8)) {
             config.start_vaccine = day + 1;
             std::cout<< "Start vaccine on day " << day+1 << std::endl;
         }
@@ -253,8 +216,9 @@ void CovidModel::run_simulation(std::vector<char> &temp_states, size_t day) {
             std::pair<size_t, size_t> infection_num = get_infected_num(person);
             size_t infected = infection_num.first, not_infected = infection_num.second;
 
+            size_t connections = infected + not_infected;
             double beta;
-            if (infected + not_infected == 0) {
+            if (connections == 0) {
                 beta = 0;
             } else {
                 beta = states.beta * ((double)infected / (double)(not_infected + infected));
@@ -264,17 +228,17 @@ void CovidModel::run_simulation(std::vector<char> &temp_states, size_t day) {
                 temp_states[person] = E_STATE;
             }
 
-            if ((rand_f >= beta) && (rand_f <= beta + states.omega) && (day >= config.start_vaccine)) {
+            if ((config.max_min_rand_vaccination == 0) &&
+                (rand_f >= beta) && (rand_f <= beta + states.omega) &&
+                (day >= config.start_vaccine)) {
                 temp_states[person] = V_STATE;
             }
 
-            if ((config.who_vaccinated) && (person < config.max_contacts) && (day >= config.start_vaccine)) {
-
+            if ((config.max_min_rand_vaccination == -1) && (connections < max_connections_for_min_vaccinations)) {
                 temp_states[person] = V_STATE;
             }
-            else if ((not config.who_vaccinated) && (config.max_contacts < person) && (person < (config.max_contacts * 2)) && (day >= config.start_vaccine)) {
+            if ((config.max_min_rand_vaccination == 1) && (connections > min_connections_for_max_vaccinations)) {
                 temp_states[person] = V_STATE;
-
             }
 
         } else {

@@ -1,8 +1,6 @@
 import subprocess
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib import pyplot as plt1
-
 
 STATES = ["S", "E", "I", "R", "V", "D", "M"]
 
@@ -67,78 +65,78 @@ def change_config_line(cfg_path, name_of_line, new_amount):
 
 
 def compare_state_for_lockdown(num_of_simulations, state_number):
-    change_config_line("../config.dat", "is_lockdown", 1)
+    fig, plts = plt.subplots(len(state_number))
 
-    t_1, u_1 = run_model(num_of_simulations)
-    plt.plot(t_1, u_1[:, state_number], label=STATES[state_number] + " with lockdown")
-
+    change_config_line("../config.dat", "max_min_rand_vaccination", 0)
     change_config_line("../config.dat", "is_lockdown", 0)
 
+    t_1, u_1 = run_model(num_of_simulations)
+    for i in range(len(state_number)):
+        plts[i].plot(t_1, u_1[:, state_number[i]], label=STATES[state_number[i]] + " vaccination without lockdown")
+
+    change_config_line("../config.dat", "is_lockdown", 1)
+
     t_2, u_2 = run_model(num_of_simulations)
-    plt.plot(t_2, u_2[:, state_number], label=STATES[state_number] + " without lockdown")
+    for i in range(len(state_number)):
+        plts[i].plot(t_2, u_2[:, state_number[i]], label=STATES[state_number[i]] + " vaccination with lockdown")
 
-    plt.legend()
-    plt.show()
+    change_config_line("../config.dat", "start_vaccine", 10000)
 
-    plt.savefig("../plots/lockdown.png")
+    t_3, u_3 = run_model(num_of_simulations)
+    for i in range(len(state_number)):
+        plts[i].plot(t_3, u_3[:, state_number[i]], label=STATES[state_number[i]] + " lockdown without vaccination")
 
+    for i in range(len(state_number)):
+        plts[i].legend()
 
-def compare_state_for_vaccine(num_of_simulations, days, state_number):
-    start_vaccine = 100
-
-    while start_vaccine < days:
-        change_config_line("../config.dat", "start_vaccine", start_vaccine)
-
-        t, u = run_model(num_of_simulations)
-        plt.plot(t, u[:, state_number], label=STATES[state_number] + " vaccine start: " + str(start_vaccine))
-
-        start_vaccine += 100
-
-    plt.legend()
-    # plt.show(
-
-    plt.savefig("../plots/vaccine.png")
+    plt.savefig("../plots/impact_of_lockdown.png")
 
 
 def compare_vaccine_max_min_contacts(num_of_simulations, state_number):
-    change_config_line("../config.dat", "who_vaccinated", 1)
+    fig, plts = plt.subplots(len(state_number))
+
+    change_config_line("../config.dat", "max_min_rand_vaccination", 1)
     t_1, u_1 = run_model(num_of_simulations)
-    plt.plot(t_1, u_1[:, state_number], label=STATES[state_number] + " vaccinated max connection ")
-    plt.plot(t_1, u_1[:, 5], label=STATES[5] + " vaccinated max connection ")
+    for i in range(len(state_number)):
+        plts[i].plot(t_1, u_1[:, state_number[i]], label=STATES[state_number[i]] + " vaccinated max connection ")
 
-    change_config_line("../config.dat", "who_vaccinated", 0)
+    change_config_line("../config.dat", "max_min_rand_vaccination", 0)
     t_2, u_2 = run_model(num_of_simulations)
-    plt.plot(t_2, u_2[:, state_number], label=STATES[state_number] + " vaccinated min connection ")
-    plt.plot(t_2, u_2[:, 5], label=STATES[5] + " vaccinated min connection ")
+    for i in range(len(state_number)):
+        plts[i].plot(t_2, u_2[:, state_number[i]], label=STATES[state_number[i]] + " vaccinated random connection ")
 
-    change_config_line("../config.dat", "who_vaccinated", -1)
+    change_config_line("../config.dat", "max_min_rand_vaccination", -1)
     t_3, u_3 = run_model(num_of_simulations)
-    plt.plot(t_3, u_3[:, state_number], label=STATES[state_number] + " vaccinated random connection ")
-    plt.plot(t_3, u_3[:, 5], label=STATES[5] + " vaccinated random connection ")
+    for i in range(len(state_number)):
+        plts[i].plot(t_3, u_3[:, state_number[i]], label=STATES[state_number[i]] + " vaccinated min connection ")
 
-    plt.legend()
-    # plt.show()
+    for i in range(len(state_number)):
+        plts[i].legend()
+
     plt.savefig("../plots/max_min_random.png")
 
 
 def compare_vaccine_on_peaks(num_of_simulations, state_number):
+    fig, plts = plt.subplots(len(state_number))
+
     change_config_line("../config.dat", "when_vaccinated", -1)
     t_1, u_1 = run_model(num_of_simulations)
-    plt.plot(t_1, u_1[:, state_number], label=STATES[state_number] + " vaccinated on middle of the peak ")
-    plt.plot(t_1, u_1[:, 5], label=STATES[5] + " vaccinated on middle of the peak ")
+    for i in range(len(state_number)):
+        plts[i].plot(t_1, u_1[:, state_number[i]], label=STATES[state_number[i]] + " vaccinated on the beginning of the peak ")
 
     change_config_line("../config.dat", "when_vaccinated", 0)
-    t_1, u_1 = run_model(num_of_simulations)
-    plt.plot(t_1, u_1[:, state_number], label=STATES[state_number] + " vaccinated on the peak ")
-    plt.plot(t_1, u_1[:, 5], label=STATES[5] + " vaccinated on the peak ")
+    t_2, u_2 = run_model(num_of_simulations)
+    for i in range(len(state_number)):
+        plts[i].plot(t_2, u_2[:, state_number[i]], label=STATES[state_number[i]] + " vaccinated on the peak ")
 
     change_config_line("../config.dat", "when_vaccinated", 1)
-    t_1, u_1 = run_model(num_of_simulations)
-    plt.plot(t_1, u_1[:, state_number], label=STATES[state_number] + " vaccinated on middle of the descent ")
-    plt.plot(t_1, u_1[:, 5], label=STATES[5] + " vaccinated on middle of the descent ")
+    t_3, u_3 = run_model(num_of_simulations)
+    for i in range(len(state_number)):
+        plts[i].plot(t_3, u_3[:, state_number[i]], label=STATES[state_number[i]] + "vaccinated on middle of the "
+                                                                                   "descent")
 
-    plt.legend()
-    # plt.show(
+    for i in range(len(state_number)):
+        plts[i].legend()
 
     plt.savefig("../plots/peaks.png")
 
@@ -159,10 +157,43 @@ def plot_probs(path):
     plt.show()
 
 
+def plot_connections(path):
+    with open(path, "r") as output_file:
+        output = output_file.readlines()
+
+    num_people = []
+    number_con = []
+    min_c = 50
+    max_c = 60
+
+    while min_c < len(output)/30:
+        number_con.append((max_c+min_c)/2)
+        count_con = 0
+        for line in output:
+            line = int(line)
+            if min_c <= line < max_c:
+                count_con += 1
+        num_people.append(count_con)
+
+        min_c += 10
+        max_c += 10
+
+    # plt.plot(number_con, num_people, label="connections distribution")
+    # plt.legend()
+    # plt.savefig("../plots/test")
+    # plt.show()
+
+    plt.bar(number_con, num_people)
+    plt.xticks(number_con)
+    plt.yticks(num_people)
+    plt.xlabel("Number of connections")
+    plt.ylabel("Number of people")
+
+    # plt.legend()
+    plt.show()
+
 
 if __name__ == '__main__':
-    # compare_state_for_lockdown(1, 3)
-    # compare_state_for_vaccine(1, 300, 3)
-    # compare_vaccine_max_min_contacts(3, 3)
-    # compare_vaccine_on_peaks(1, 3)
-    plot_probs("../plots/probabilities.txt")
+    # compare_state_for_lockdown(5, [3, 5])
+    # compare_vaccine_max_min_contacts(5, [3, 5])
+    compare_vaccine_on_peaks(5, [3, 5])
